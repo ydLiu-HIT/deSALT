@@ -2,7 +2,7 @@
 deSALT - De Bruijn graph-based Spliced Aligner for Long Transcriptome reads
 
 ---
-## Getting started
+### Getting started
     git clone https://github.com/ydLiu-HIT/deSALT/
     cd deSALT
     make
@@ -10,4 +10,4 @@ deSALT - De Bruijn graph-based Spliced Aligner for Long Transcriptome reads
     ./deSALT aln ...
 
 ---
-## Introduction
+### Introduction
