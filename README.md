@@ -17,3 +17,18 @@ We benchmarked deSALT with simulated and real datasets having various read lengt
 
     1. simulate reads with different abundance of gene expressions
     2. simulate reads with
+
+---
+### Synopsis
+Reference genome indexing
+```
+deSALT index ref.fa <index_route>
+```
+	
+Read alignment
+```
+deSALT aln <index_route> read.fa/fq
+```
+
+---
+### Commands and options
