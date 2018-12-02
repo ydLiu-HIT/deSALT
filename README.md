@@ -35,8 +35,8 @@ deSALT aln <index_route> read.fa/fq
 ```
 Algorithm options:
 
-	-t --thread           [INT]	Number of threads. [1]\n");
-	-K --index-kmer       [INT]	K-mer length of deBGA index. [%u]\n", INDEX_KMER);
+	-t --thread           [INT]	Number of threads. [1]
+	-K --index-kmer       [INT]	K-mer length of deBGA index. [22]
 	-k --seeding-kmer     [INT]	K-mer length of seeding process. [%u]\n", SEEDING_KMER);
 	-a --local-hash-kmer  [INT]	K-mer length of local hash process. [%u]\n", LOCAL_HASH_KMER);
 	-s --seed-step        [INT]	Interval of seeding. [%u]\n", SEED_STEP);
