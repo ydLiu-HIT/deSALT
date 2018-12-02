@@ -37,13 +37,12 @@ Algorithm options:
 
 	-t --thread           [INT]	Number of threads. [1]
 	-K --index-kmer       [INT]	K-mer length of deBGA index. [22]
-	-k --seeding-kmer     [INT]	K-mer length of seeding process. [%u]\n", SEEDING_KMER);
-	-a --local-hash-kmer  [INT]	K-mer length of local hash process. [%u]\n", LOCAL_HASH_KMER);
+	-k --seeding-kmer     [INT]	K-mer length of seeding process. [15]
+	-a --local-hash-kmer  [INT]	K-mer length of local hash process. [8]
 	-s --seed-step        [INT]	Interval of seeding. [%u]\n", SEED_STEP);
-    	-B --batch-size       [INT]	The number of reads to be processed in one loop. [%u]\n", BATCH_SIZE);
-	-n --max-uni-pos      [INT]	Maximum allowed number of hits per seed. [%u]\n", MAX_UNI_POS);
-	-l --max-readlen      [INT]	Maximum allowed read length. [%u]\n", MAX_READLEN);
-	-r --max-exon         [INT]	Maximum allowed exon numbers in one transcript. [%u]\n", MAX_EXON);
+    	-B --batch-size       [INT]	The number of reads to be processed in one loop. [65535]
+	-n --max-uni-pos      [INT]	Maximum allowed number of hits per seed. [50]
+	-l --max-readlen      [INT]	Maximum allowed read length. [1000000]
 	-i --min-frag-dis     [INT]	Maximum allowed distance of two fragment can be connect. [%u]\n", MIN_FRAG_DIS);
 	-I --max-intron-len   [INT]	Maximum allowed intron length. [%u]\n", SPLICDISTANCE);
 	-c --min-chain-score  [INT]	Minimal skeleton score(match bases minus gap penalty). [%u]\n", MIN_CHAIN_SCORE);
