@@ -32,3 +32,53 @@ deSALT aln <index_route> read.fa/fq
 
 ---
 ### Commands and options
+```
+Algorithm options:
+
+	-t --thread           [INT]	Number of threads. [1]\n");
+	-K --index-kmer       [INT]	K-mer length of deBGA index. [%u]\n", INDEX_KMER);
+	-k --seeding-kmer     [INT]	K-mer length of seeding process. [%u]\n", SEEDING_KMER);
+	-a --local-hash-kmer  [INT]	K-mer length of local hash process. [%u]\n", LOCAL_HASH_KMER);
+	-s --seed-step        [INT]	Interval of seeding. [%u]\n", SEED_STEP);
+    	-B --batch-size       [INT]	The number of reads to be processed in one loop. [%u]\n", BATCH_SIZE);
+	-n --max-uni-pos      [INT]	Maximum allowed number of hits per seed. [%u]\n", MAX_UNI_POS);
+	-l --max-readlen      [INT]	Maximum allowed read length. [%u]\n", MAX_READLEN);
+	-r --max-exon         [INT]	Maximum allowed exon numbers in one transcript. [%u]\n", MAX_EXON);
+	-i --min-frag-dis     [INT]	Maximum allowed distance of two fragment can be connect. [%u]\n", MIN_FRAG_DIS);
+	-I --max-intron-len   [INT]	Maximum allowed intron length. [%u]\n", SPLICDISTANCE);
+	-c --min-chain-score  [INT]	Minimal skeleton score(match bases minus gap penalty). [%u]\n", MIN_CHAIN_SCORE);
+	-g --max-read-gap     [INT]	Maximum allowed gap in read when chaining. [%u]\n", MAX_READ_JOIN_GAP);
+	-p --secondary-ratio  [FLOAT]	Min secondary-to-primary score ratio. [%.2f]\n", SECONDARY_TO_PRIMARY);
+	-p --e-shift          [INT]	The shift of downstream and upstream when alignment. [%u]\n", E_SHIFT);
+    	-G --gtf              [STR]	Provided an annotation file for precise intron donor and acceptor sites.\n");
+    	                           	The release of annotation file and reference genome must the same!\n\n");
+	-x --read-type        [STR]	Specifiy the type of reads and set multiple paramters unless overriden.\n");
+	                           	[null] default parameters.\n");
+	                           	ccs (PacBio SMRT CCS reads): error rate 1%%\n");
+	                              	clr (PacBio SMRT CLR reads): error rate 15%%\n");
+	                              	ont1d (Oxford Nanopore 1D reads): error rate > 20%%\n");
+	                               	ont2d (Oxford Nanopore 2D reads): error rate > 12%%\n");
+
+Scoring options:
+
+	-O --open-pen         [INT(,INT)]	
+					Gap open penealty. [%u,%u]\n", GAP_OPEN, GAP_OPEN2);
+	-E --ext-pen          [INT(,INT)]	
+					Gap extension penalty; a k-long gap costs min{O1+k*E1,O2+k*E2}. [%u,%u]\n", GAP_EXT, GAP_EXT2);
+	-m --match-score      [INT]    	Match score for SW-alginment. [%u]\n", MATCH_SCORE);
+	-M --mis-score        [INT]    	Mismatch score for SW-alignment. [%u]\n", MISMATCH_SCORE);
+	-z --zdrop            [INT(,INT)]
+					Z-drop score for splice/non-splice alignment. [%u]\n", ZDROP_SCORE);
+	-w --band-width       [INT]    	Bandwidth used in chaining and DP-based alignment. [%u]\n\n", BANDWIDTH);
+
+Output options:
+
+	-N --top-num-aln      [INT]    	Max allowed number of secondary alignment. [%u]\n", TOP_NUM_ALN);
+	-Q --without-qual              	Don't output base quality in SAM\n");
+	-f --temp-file-perfix [STR]    	Perfix of temp file during the program. [%s]\n", TEMP_FILE_PERFIRX);
+		                        If you run more than one tgs program in the same time, \n");
+		                        you must point at a different perfix of temp file for each program!\n");
+	-o --output           [STR]     Output file (SAM format). [%s]\n", OUTPUT);
+```
+
+
