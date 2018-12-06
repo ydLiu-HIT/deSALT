@@ -39,45 +39,45 @@ Algorithm options:
 	-K --index-kmer       [INT]	K-mer length of deBGA index. [22]
 	-k --seeding-kmer     [INT]	K-mer length of seeding process. [15]
 	-a --local-hash-kmer  [INT]	K-mer length of local hash process. [8]
-	-s --seed-step        [INT]	Interval of seeding. [%u]\n", SEED_STEP);
+	-s --seed-step        [INT]	Interval of seeding. [5]
     	-B --batch-size       [INT]	The number of reads to be processed in one loop. [65535]
 	-n --max-uni-pos      [INT]	Maximum allowed number of hits per seed. [50]
 	-l --max-readlen      [INT]	Maximum allowed read length. [1000000]
-	-i --min-frag-dis     [INT]	Maximum allowed distance of two fragment can be connect. [%u]\n", MIN_FRAG_DIS);
-	-I --max-intron-len   [INT]	Maximum allowed intron length. [%u]\n", SPLICDISTANCE);
-	-c --min-chain-score  [INT]	Minimal skeleton score(match bases minus gap penalty). [%u]\n", MIN_CHAIN_SCORE);
-	-g --max-read-gap     [INT]	Maximum allowed gap in read when chaining. [%u]\n", MAX_READ_JOIN_GAP);
-	-p --secondary-ratio  [FLOAT]	Min secondary-to-primary score ratio. [%.2f]\n", SECONDARY_TO_PRIMARY);
-	-p --e-shift          [INT]	The shift of downstream and upstream when alignment. [%u]\n", E_SHIFT);
-    	-G --gtf              [STR]	Provided an annotation file for precise intron donor and acceptor sites.\n");
-    	                           	The release of annotation file and reference genome must the same!\n\n");
-	-x --read-type        [STR]	Specifiy the type of reads and set multiple paramters unless overriden.\n");
-	                           	[null] default parameters.\n");
-	                           	ccs (PacBio SMRT CCS reads): error rate 1%%\n");
-	                              	clr (PacBio SMRT CLR reads): error rate 15%%\n");
-	                              	ont1d (Oxford Nanopore 1D reads): error rate > 20%%\n");
-	                               	ont2d (Oxford Nanopore 2D reads): error rate > 12%%\n");
+	-i --min-frag-dis     [INT]	Maximum allowed distance of two fragment can be merge. [20]
+	-I --max-intron-len   [INT]	Maximum allowed intron length. [200000]
+	-c --min-chain-score  [INT]	Minimal skeleton score(match bases minus gap penalty). [30]
+	-g --max-read-gap     [INT]	Maximum allowed gap in read when chaining. [2000]
+	-p --secondary-ratio  [FLOAT]	Min secondary-to-primary score ratio. [0.9]
+	-p --e-shift          [INT]	The shift of downstream and upstream when alignment. [5]
+    	-G --gtf              [STR]	Provided an annotation file for precise intron donor and acceptor sites.
+    	                           	The release of annotation file and reference genome must the same!
+	-x --read-type        [STR]	Specifiy the type of reads and set multiple paramters unless overriden.
+	                           	[null] default parameters.
+	                           	ccs (PacBio SMRT CCS reads): error rate 1%
+	                              	clr (PacBio SMRT CLR reads): error rate 15%
+	                              	ont1d (Oxford Nanopore 1D reads): error rate > 20%
+	                               	ont2d (Oxford Nanopore 2D reads): error rate > 12%
 
 Scoring options:
 
 	-O --open-pen         [INT(,INT)]	
-					Gap open penealty. [%u,%u]\n", GAP_OPEN, GAP_OPEN2);
+					Gap open penealty. [2, 32]
 	-E --ext-pen          [INT(,INT)]	
-					Gap extension penalty; a k-long gap costs min{O1+k*E1,O2+k*E2}. [%u,%u]\n", GAP_EXT, GAP_EXT2);
-	-m --match-score      [INT]    	Match score for SW-alginment. [%u]\n", MATCH_SCORE);
-	-M --mis-score        [INT]    	Mismatch score for SW-alignment. [%u]\n", MISMATCH_SCORE);
+					Gap extension penalty; a k-long gap costs min{O1+k*E1,O2+k*E2}. [1, 0]
+	-m --match-score      [INT]    	Match score for SW-alginment. [1]
+	-M --mis-score        [INT]    	Mismatch score for SW-alignment. [2]
 	-z --zdrop            [INT(,INT)]
-					Z-drop score for splice/non-splice alignment. [%u]\n", ZDROP_SCORE);
-	-w --band-width       [INT]    	Bandwidth used in chaining and DP-based alignment. [%u]\n\n", BANDWIDTH);
+					Z-drop score for splice/non-splice alignment. [400]
+	-w --band-width       [INT]    	Bandwidth used in chaining and DP-based alignment. [500]
 
 Output options:
 
-	-N --top-num-aln      [INT]    	Max allowed number of secondary alignment. [%u]\n", TOP_NUM_ALN);
-	-Q --without-qual              	Don't output base quality in SAM\n");
-	-f --temp-file-perfix [STR]    	Perfix of temp file during the program. [%s]\n", TEMP_FILE_PERFIRX);
-		                        If you run more than one tgs program in the same time, \n");
-		                        you must point at a different perfix of temp file for each program!\n");
-	-o --output           [STR]     Output file (SAM format). [%s]\n", OUTPUT);
+	-N --top-num-aln      [INT]    	Max allowed number of secondary alignment. [5]
+	-Q --without-qual              	Don't output base quality in SAM.
+	-f --temp-file-perfix [STR]    	Perfix of temp file during the program. [./1pass_anchor]
+		                        If you run more than one tgs program in the same time,
+		                        you must point at a different perfix of temp file for each program!
+	-o --output           [STR]     Output file (SAM format). [./aln.sam]
 ```
 
 
