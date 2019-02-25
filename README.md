@@ -59,16 +59,15 @@ Algorithm options:
 	-i --min-frag-dis     [INT]	Maximum allowed distance of two fragment can be merge. [20]
 	-I --max-intron-len   [INT]	Maximum allowed intron length. [200000]
 	-c --min-chain-score  [INT]	Minimal skeleton score(match bases minus gap penalty). [30]
-	-d --strand-diff      [INT]     The minimal difference of dp score by two strand to make sure the 
-					transcript strand. [20]
+	-d --strand-diff      [INT]     The minimal difference of dp score by two strand to make sure the transcript strand. [20]
 	-g --max-read-gap     [INT]	Maximum allowed gap in read when generating skeleton. [2000]
 	-p --secondary-ratio  [FLOAT]	Min secondary-to-primary score ratio. An alignment can be regard as a secondary
 					alignment if secondary_score / primary_score > 0.9. [0.9]
-	-p --e-shift          [INT]	The shift of downstream and upstream when alignment. [5]
+	-p --e-shift          [INT]	The number of downstream (upstream) exons will be processed when left (right) extension. [5]
     	-G --gtf              [STR]	Provided an annotation file for precise intron donor and acceptor sites.
-    	                           	The release of annotation file and reference genome must the same!
+    	                           	The version information of annotation file and reference genome must the same!
 	-x --read-type        [STR]	Specifiy the type of reads and set multiple paramters unless overriden.
-	                           	[null] default parameters.
+	                           	[null] default parameters. error rate 13% 
 	                           	ccs (PacBio SMRT CCS reads): error rate 1%
 	                              	clr (PacBio SMRT CLR reads): error rate 15%
 	                              	ont1d (Oxford Nanopore 1D reads): error rate > 20%
@@ -90,9 +89,11 @@ Output options:
 
 	-N --top-num-aln      [INT]    	Max allowed number of secondary alignment. [5]
 	-Q --without-qual              	Don't output base quality in SAM.
-	-f --temp-file-perfix [STR]    	Perfix of temp file during the program. [./1pass_anchor]
-		                        If you run more than one tgs program in the same time,
-		                        you must point at a different perfix of temp file for each program!
+	-f --temp-file-perfix [STR]    	Route of temporary files after the first-pass alignment. [./1pass_anchor]
+		                        If you run more than one deSALT program in the same time,
+		                        you must point out different routes of temporary files for each program!
+					If no, every deSALT program will write temporary data to the same file which
+					will cause crash of program in 2-pass alignment due to inconsistent temporary data.
 	-o --output           [STR]     Output file (SAM format). [./aln.sam]
 ```
 
