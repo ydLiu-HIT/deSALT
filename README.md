@@ -1,7 +1,6 @@
 # deSALT:
 deSALT - De Bruijn graph-based Spliced Aligner for Long Transcriptome reads
 
----
 ## Getting started
     git clone https://github.com/ydLiu-HIT/deSALT/
     cd deSALT
@@ -19,13 +18,12 @@ deSALT is open source and free for non-commerical use which is mainly designed b
 ## Memory usage
 The memory usage of deSALT can fit the configuraions of most modern servers and workstations. Its peak memory footprint depends on the size of reference genome mainly due to the generation of RdBG-index. 35 Gigabytes, 31 Gigabytes and 3.5 Gigabytes are required for Homo Sapiens(GRCh38), Mus Musculus(GRCm38) and Drosophila melanogaster(DM6) geomes, on a server with Intel Xeon CPU at 2.00 GHz, 1 Terabytes RAM running Linux Ubuntu 14.04. For instance, the peak memory is about 37.65 Gigabytes for human NA12878 dataset.
 
-### Installation
+## Installation
 Current version of deSALT needs to be run on Linux operating system. The source code is written in C, and can be directly download from: https://github.com/ydLiu-HIT/deSALT. The makefile is attached. Use the make command for generating the executable file.
 
 Moreover, in current version of deSALT, we employed the deBGA mapper (https://github.com/HongzheGuo/deBGA) for generation RdBG-index. To be more user-firendly, we have built the source code of deBGA (version 0.1) into that of deSALT. And set `START_POS_REF = 0` instead of `START_POS_REF = 2048` in `load_input.h` source file of deBGA, i.e. we set the reference genome starting from 0 rather than 2048.
 
----
-### Synopsis
+## Synopsis
 Reference genome indexing
 ```
 deSALT index ref.fa <index_route>
@@ -36,8 +34,7 @@ Read alignment
 deSALT aln <index_route> read.fa/fq
 ```
 
----
-### Commands and options
+## Commands and options
 ```
 Algorithm options:
 
@@ -93,8 +90,6 @@ Output options:
 					will cause crash of program in 2-pass alignment due to inconsistent temporary data.
 	-o --output           [STR]     Output file (SAM format). [./aln.sam]
 ```
----
-### Important options
+## Important options
 
----
-### Simulation benchmarking
+## Simulation benchmarking
