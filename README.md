@@ -98,3 +98,6 @@ In the simulation study, we simulated 36 RNA-seq long read datasets with various
 Due to there is no well-studied simulator for noisy long RNA-seq reads, we used PBSIM to generate synthetic datasets by a set of transcripts generated from a particular reference genome and corresponding annotations inspired by RNAseqEval project (https://github.com/kkrizanovic/RNAseqEval). Detailed description of synthetic dataset preparation can be found at https://github.com/ydLiu-HIT/deSALT/simulation/Sim_data_generation.md.
 
 The simulated datasets and description used for benchmarking are available at https://drive.google.com/drive/folders/16RpDYkdTCwOHmvoWNehnUp7nxrNt_Q7T?usp=sharing
+
+## Contact
+For advising, bug reporting and requiring help, please contact ydwang@hit.edu.cn or 16B903057@hit.edu.cn
