@@ -97,4 +97,4 @@ Output options:
 	-o --output           [STR]     Output file (SAM format). [./aln.sam]
 ```
 
-
+#### Important options
