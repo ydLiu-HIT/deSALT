@@ -96,5 +96,8 @@ Output options:
 					will cause crash of program in 2-pass alignment due to inconsistent temporary data.
 	-o --output           [STR]     Output file (SAM format). [./aln.sam]
 ```
+---
+### Important options
 
-#### Important options
+---
+### Simulation benchmarking
