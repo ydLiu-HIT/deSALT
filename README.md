@@ -48,9 +48,9 @@ Algorithm options:
 	-K --index-kmer       [INT]	K-mer length of RdBG-index, the default index kmer-size of deBGA.[22]
 	-k --seeding-kmer     [INT]	K-mer length of seeding process (no long than RdBG-index). [15]
 	-a --local-hash-kmer  [INT]	K-mer length of local hash process. In order to detect spanning exons in 2-pass
-					alignment, a local hash query procedure is needed. The hash kmer if recommend no less
+					alignment, a local hash query procedure is needed. The hash kmer is recommend no less
 					than 10 bp. [8]
-	-s --seed-step        [INT]	The interval of seeding. [5]
+	-s --seed-step        [INT]	The interval of seeding. deSALT extracts kmer at every *s* bp. [5]
     	-B --batch-size       [INT]	The counts of reads to be processed in one loop. For occupuying less memory, deSALT
 					take only 100000 reads into the memory every time. [100000]
 	-n --max-uni-pos      [INT]	Maximum allowed number of hits per seed. If one seed in unipath has more than 50
@@ -60,7 +60,8 @@ Algorithm options:
 	-I --max-intron-len   [INT]	Maximum allowed intron length. [200000]
 	-c --min-chain-score  [INT]	Minimal skeleton score(match bases minus gap penalty). [30]
 	-g --max-read-gap     [INT]	Maximum allowed gap in read when chaining. [2000]
-	-p --secondary-ratio  [FLOAT]	Min secondary-to-primary score ratio. [0.9]
+	-p --secondary-ratio  [FLOAT]	Min secondary-to-primary score ratio. An alignment can be regard as a secondary
+					alignment if secondary_score / primary_score > 0.9. [0.9]
 	-p --e-shift          [INT]	The shift of downstream and upstream when alignment. [5]
     	-G --gtf              [STR]	Provided an annotation file for precise intron donor and acceptor sites.
     	                           	The release of annotation file and reference genome must the same!
