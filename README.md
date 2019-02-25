@@ -50,7 +50,7 @@ Algorithm options:
 	-a --local-hash-kmer  [INT]	K-mer length of local hash process. In order to detect spanning exons in 2-pass
 					alignment, a local hash query procedure is needed. The hash kmer is recommend no less
 					than 10 bp. [8]
-	-s --seed-step        [INT]	The interval of seeding. deSALT extracts kmer at every *s* bp. [5]
+	-s --seed-step        [INT]	The interval of seeding. deSALT extracts kmer at every s bp. [5]
     	-B --batch-size       [INT]	The counts of reads to be processed in one loop. For occupuying less memory, deSALT
 					take only 100000 reads into the memory every time. [100000]
 	-n --max-uni-pos      [INT]	Maximum allowed number of hits per seed. If one seed in unipath has more than 50
@@ -59,7 +59,8 @@ Algorithm options:
 	-i --min-frag-dis     [INT]	Maximum allowed distance of two fragment can be merge. [20]
 	-I --max-intron-len   [INT]	Maximum allowed intron length. [200000]
 	-c --min-chain-score  [INT]	Minimal skeleton score(match bases minus gap penalty). [30]
-	-g --max-read-gap     [INT]	Maximum allowed gap in read when chaining. [2000]
+	-d --strand-diff      [INT]     The minimal difference of dp score by two strand to make sure the transcript strand. [20]
+	-g --max-read-gap     [INT]	Maximum allowed gap in read when generating skeleton. [2000]
 	-p --secondary-ratio  [FLOAT]	Min secondary-to-primary score ratio. An alignment can be regard as a secondary
 					alignment if secondary_score / primary_score > 0.9. [0.9]
 	-p --e-shift          [INT]	The shift of downstream and upstream when alignment. [5]
