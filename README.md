@@ -24,6 +24,10 @@ deSALT is mainly designed by Yadong Liu & Bo Liu and developed by Yadong Liu in 
 The memory usage of deSALT can fit the configuraions of most modern servers and workstations. Its peak memory footprint depends on the size of reference genome mainly due to the generation of RdBG-index. 35 Gigabytes, 31 Gigabytes and 3.5 Gigabytes are required for Homo Sapiens, Mus Musculus and Drosophila melanogaster geomes, on a server with Intel Xeon CPU at 2.00 GHz, 1 Terabytes RAM running Linux Ubuntu 14.04. For instance, the peak memory is about 37.65 Gigabytes for human NA12878 dataset.
 
 ---
+### Installation
+Current version of deSALT needs to be run on Linux operating system. The source code is written in C, and can be directly download from: https://github.com/ydLiu-HIT/deSALT. The makefile is attached. Use the make command for generating the executable file.
+
+---
 ### Synopsis
 Reference genome indexing
 ```
