@@ -53,7 +53,8 @@ Algorithm options:
 	-s --seed-step        [INT]	The interval of seeding. [5]
     	-B --batch-size       [INT]	The counts of reads to be processed in one loop. For occupuying less memory, deSALT
 					take only 100000 reads into the memory every time. [100000]
-	-n --max-uni-pos      [INT]	Maximum allowed number of hits per seed. If one seed in unipath has more than 50 					 copies in reference genome, we will ingore the seed. [50]
+	-n --max-uni-pos      [INT]	Maximum allowed number of hits per seed. If one seed in unipath has more than 50
+					copies in reference genome, we will ingore the seed. [50]
 	-l --max-readlen      [INT]	Maximum allowed read length. [1000000]
 	-i --min-frag-dis     [INT]	Maximum allowed distance of two fragment can be merge. [20]
 	-I --max-intron-len   [INT]	Maximum allowed intron length. [200000]
