@@ -9,7 +9,6 @@ deSALT - De Bruijn graph-based Spliced Aligner for Long Transcriptome reads
     ./deSALT index ref.fa index_route
     ./deSALT aln index_route read.fq
 
----
 ## Introduction
 deSALT(de Bruijn graph-based Spliced Aligner for Long Transcriptome reads) is a novel alignment approach with faster speed and sensitive exon identification. Taking the advantages of its novel two pass alignment strategy based on de Bruijn graph-based index, efficient alignment skeleton generation, sensitive exon identification and specifically designed local alignment, deSALT is a fast and accurate RNA-seq long read alignment approach. It has ability to produce high quality full-length read alignment, which is effective to recover the exons and splicing junctions along the entire reads.
 
@@ -17,11 +16,9 @@ We benchmarked deSALT with 36 simulated datasets having various read length, seq
 
 deSALT is open source and free for non-commerical use which is mainly designed by Yadong Liu & Bo Liu and developed by Yadong Liu in Center for Bioinformatics, Harbin Institute of Technology, China.
 
----
 ## Memory usage
 The memory usage of deSALT can fit the configuraions of most modern servers and workstations. Its peak memory footprint depends on the size of reference genome mainly due to the generation of RdBG-index. 35 Gigabytes, 31 Gigabytes and 3.5 Gigabytes are required for Homo Sapiens(GRCh38), Mus Musculus(GRCm38) and Drosophila melanogaster(DM6) geomes, on a server with Intel Xeon CPU at 2.00 GHz, 1 Terabytes RAM running Linux Ubuntu 14.04. For instance, the peak memory is about 37.65 Gigabytes for human NA12878 dataset.
 
----
 ### Installation
 Current version of deSALT needs to be run on Linux operating system. The source code is written in C, and can be directly download from: https://github.com/ydLiu-HIT/deSALT. The makefile is attached. Use the make command for generating the executable file.
 
