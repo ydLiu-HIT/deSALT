@@ -15,9 +15,7 @@ deSALT(de Bruijn graph-based Spliced Aligner for Long Transcriptome reads) is a 
 
 We benchmarked deSALT with 36 simulated datasets having various read length, sequencing error rates and sequencing depth (simulation workflow links). deSALT also assessed the ability of aligners by two real RNA-seq datasets produced by Oxford Nanopore and PacBio platform. One from the well-studied human sample NA12878 by ONT technology and another from real mouse sample (SRR6238555) by SMRT technology.
 
-deSALT is open source and free for non-commerical use.
-
-deSALT is mainly designed by Yadong Liu & Bo Liu and developed by Yadong Liu in Center for Bioinformatics, Harbin Institute of Technology, China.
+deSALT is open source and free for non-commerical use which is mainly designed by Yadong Liu & Bo Liu and developed by Yadong Liu in Center for Bioinformatics, Harbin Institute of Technology, China.
 
 ---
 ### Memory usage
