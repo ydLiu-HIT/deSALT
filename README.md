@@ -93,3 +93,4 @@ Output options:
 ## Important options
 
 ## Simulation benchmarking
+The simulated datasets and description used for benchmarking are available at https://drive.google.com/drive/folders/16RpDYkdTCwOHmvoWNehnUp7nxrNt_Q7T?usp=sharing
