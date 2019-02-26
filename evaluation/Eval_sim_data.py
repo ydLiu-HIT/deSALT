@@ -564,10 +564,9 @@ if __name__ == '__main__':
         paramdict = pparser.parseCmdArgs(sys.argv[9:])
         paramdict['command'] = ' '.join(sys.argv)
 
-        Array = cal_background.processData(datafolder, group_list, annotationfile, ss_list, as_list)
+        Array = cal_background.process(datafolder, group_list, annotationfile, ss_list, as_list)
 
-        print "here"
-        print Array.Total_reads, Array.sTotal_bases, Array.Total_expected_exons
+        print Array.Total_reads, Array.Total_bases, Array.Total_expected_exons
         print Array.Total_level2_reads, Array.Total_level2_bases, Array.Total_level2_expected_exons
         print Array.Total_level2_r_reads, Array.Total_level2_r_bases, Array.Total_level2_r_expected_exons
         print Array.Total_level3_AS_reads, Array.Total_level3_AS_bases, Array.Total_level3_AS_expected_exons
