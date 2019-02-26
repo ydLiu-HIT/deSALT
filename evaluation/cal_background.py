@@ -58,7 +58,7 @@ def processData(datafolder, annotationfile, ss_list, as_list):
     #print command
     file_count = commands.getstatusoutput(command)[1]
     file_count = int(file_count)
-    print file_count
+    #print "total %d reads in %s" %(file_count, datafolder)
     AS_list = list()
     SS_list = list()
     with open(as_list, 'r') as f_as, open(ss_list, 'r') as f_ss:
@@ -240,6 +240,22 @@ def merge_static(report1, report2):
     report1.Total_level4_10_expected_exons += report2.Total_level4_10_expected_exons
 
 
+def process(data_folder, group_list, annotationfile, ss_list, as_list):
+    g_list = []
+    with open(group_list, 'r') as g:
+        lines = g.readlines()
+        for line in lines:
+            g_list.append(data_folder + line.strip())
+
+    report_total = Report()
+    for group_path in g_list:
+        report = processData(group_path, annotationfile, ss_list, as_list)
+        #merge
+        merge_static(report_total, report)
+
+    return report_total
+
+
 if __name__ == '__main__':
     data_folder = sys.argv[1]
     group_list = sys.argv[2]
@@ -258,5 +274,3 @@ if __name__ == '__main__':
         report = processData(group_path, annotationfile, ss_list, as_list)
         #merge
         merge_static(report_total, report)
-
-    return report_total
