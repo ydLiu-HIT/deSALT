@@ -566,14 +566,17 @@ if __name__ == '__main__':
 
         Array = cal_background.process(datafolder, group_list, annotationfile, ss_list, as_list)
 
-        print Array.Total_reads, Array.Total_bases, Array.Total_expected_exons
-        print Array.Total_level2_reads, Array.Total_level2_bases, Array.Total_level2_expected_exons
-        print Array.Total_level2_r_reads, Array.Total_level2_r_bases, Array.Total_level2_r_expected_exons
-        print Array.Total_level3_AS_reads, Array.Total_level3_AS_bases, Array.Total_level3_AS_expected_exons
-        print Array.Total_level3_SS_reads, Array.Total_level3_SS_bases, Array.Total_level3_SS_expected_exons
-        print Array.Total_level4_2_5_reads, Array.Total_level4_2_5_bases, Array.Total_level4_2_5_expected_exons
-        print Array.Total_level4_6_9_reads, Array.Total_level4_6_9_bases, Array.Total_level4_6_9_expected_exons
-        print Array.Total_level4_10_reads, Array.Total_level4_10_bases, Array.Total_level4_10_expected_exons
+        print "Total reads: ", Array.Total_reads
+        print "Total bases: ", Array.Total_bases
+        print "Total exons:", Array.Total_expected_exons
+        #print Array.Total_reads, Array.Total_bases, Array.Total_expected_exons
+        #print Array.Total_level2_reads, Array.Total_level2_bases, Array.Total_level2_expected_exons
+        #print Array.Total_level2_r_reads, Array.Total_level2_r_bases, Array.Total_level2_r_expected_exons
+        #print Array.Total_level3_AS_reads, Array.Total_level3_AS_bases, Array.Total_level3_AS_expected_exons
+        #print Array.Total_level3_SS_reads, Array.Total_level3_SS_bases, Array.Total_level3_SS_expected_exons
+        #print Array.Total_level4_2_5_reads, Array.Total_level4_2_5_bases, Array.Total_level4_2_5_expected_exons
+        #print Array.Total_level4_6_9_reads, Array.Total_level4_6_9_bases, Array.Total_level4_6_9_expected_exons
+        #print Array.Total_level4_10_reads, Array.Total_level4_10_bases, Array.Total_level4_10_expected_exons
 
         processData(datafolder, resultfile, annotationfile, paramdict, Array, ss_list, csv_path)
 

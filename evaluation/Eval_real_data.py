@@ -88,7 +88,6 @@ def report_result(report):
     (**)Num of aligned transcripts / exons / exons_in_samlines = %d / %d / %d
     (**)Num of algined exons length less than 15 / 20 / 30 / 40 / 50 / 60 / 70 / 80 / 90 / 100 / other = %d / %d / %d / %d / %d / %d / %d / %d / %d / %d / %d 
     (**)Num of exact-match / approx-match exons = %d / %d
-    (**)Num of BA reads(bases) 90 / 80 / 70 / 60 / 50 = %d(%d) / %d(%d) / %d(%d) / %d(%d) / %d(%d)
     (**)exon bases / intron bases (overlap, more, out) / (percent) = %d / (%d, %d, %d) / %.4f / %.4f / %.4f / %.4f
     """ %(report.Num_genes, report.Num_transcripts, report.Num_exons, \
         report.num_cover_all_exons, report.num_cover_some_exons, report.num_correct_one_exons, report.num_cover_no_exons, \
@@ -98,7 +97,6 @@ def report_result(report):
         report.num_aligned_transcripts, report.num_aligned_exons, report.num_exons_samlines, \
         report.num_exonlength_fiften, report.num_exonlength_twenty, report.num_exonlength_thirty, report.num_exonlength_fourty, report.num_exonlength_fifty, report.num_exonlength_sixty, report.num_exonlength_seventy, report.num_exonlength_eighty, report.num_exonlength_ninety, report.num_exonlength_hundred, report.num_exonlength_other, \
         report.num_exactequal_exons, report.num_approxequal_exons, \
-        report.BA90, report.BA90_base, report.BA80, report.BA80_base, report.BA70, report.BA70_base, report.BA60, report.BA60_base, report.BA50, report.BA50_base,\
         report.base_level, report.intron_bases_overlap, report.intron_bases_more, report.intron_bases_out, report.base_level / float(report.Total_readlen), report.intron_bases_overlap / float(report.Total_readlen), report.intron_bases_more / float(report.Total_readlen), report.intron_bases_out / float(report.Total_readlen))
 
 
@@ -209,10 +207,6 @@ def eval_mapping(sam_file, annotation_file, thread):
         read_dict[qname] = 0
     samlines.close()
     
-    for qname in read_dict.keys():
-        report.qname_2gene[qname] = ["*", 0]
-    
-
     samlines = pysam.AlignmentFile(sam_file, 'r')
 
     #analyzing cigar strings
@@ -378,23 +372,6 @@ def merge_result(report, report_dict):
         report.intron_bases_overlap += value.intron_bases_overlap
         report.intron_bases_more += value.intron_bases_more
         report.intron_bases_out += value.intron_bases_out
-
-        report.BA90 += value.BA90
-        report.BA80 += value.BA80
-        report.BA70 += value.BA70
-        report.BA60 += value.BA60
-        report.BA50 += value.BA50
-        report.BA90_base += value.BA90_base
-        report.BA80_base += value.BA80_base
-        report.BA70_base += value.BA70_base
-        report.BA60_base += value.BA60_base
-        report.BA50_base += value.BA50_base
-
-        #for i in value.good_name:
-        #    report.good_name.append(i)
-        for i in value.qname_2gene.keys():
-            report.qname_2gene[i] = value.qname_2gene[i]
-
 
 ## eval for each chrososome
 def eval_mapping_part(chro):
@@ -678,8 +655,6 @@ def eval_mapping_part(chro):
             num_coverd_exons = len([x for x in exonhitmap.values() if x > 0])
 
 
-            report.qname_2gene[qname] = [annotation.genename, num_coverd_exons] 
-
             # if num_coverd_exons == num_exons:
             if num_coverd_exons <= num_alignments:
                 isCoverAll = True
@@ -688,26 +663,7 @@ def eval_mapping_part(chro):
             report.base_level += aligned_bases
             report.intron_bases_overlap += intron_bases_overlap
             report.intron_bases_more += intron_bases_more
-
-            if aligned_bases > aligned_len:
-                report.BA_wrong += 1
-
-            if aligned_bases > 0.9 * aligned_len:
-                report.BA90 += 1
-                report.BA90_base += aligned_bases
-            if aligned_bases > 0.8 * aligned_len:
-                report.BA80 += 1
-                report.BA80_base += aligned_bases
-            if aligned_bases > 0.7 * aligned_len:
-                report.BA70 += 1
-                report.BA70_base += aligned_bases
-            if aligned_bases > 0.6 * aligned_len:
-                report.BA60 += 1
-                report.BA60_base += aligned_bases
-            if aligned_bases > 0.5 * aligned_len:
-                report.BA50 += 1
-                report.BA50_base += aligned_bases
-
+            
             num_correct_one_exons = 0
             if num_coverd_exons > 0:
                 report.num_cover_some_exons += 1   #as for transcript
@@ -721,7 +677,6 @@ def eval_mapping_part(chro):
             num_approxequal_exons = len([x for x in exoncompletemap.values() if x > 0])
             num_exactequal_exons = len([x for x in exonexactmap.values() if x > 0])
             
-            #report.qname_2gene[qname] = [annotation.genename, num_approxequal_exons]
 
             # fw.write("%d--%d--%d: (" %(num_exons, num_alignments, num_approxequal_exons))
             # for idx in exoncompletemap.keys():
@@ -735,7 +690,6 @@ def eval_mapping_part(chro):
             
             isGood, isSpliced = isGoodSplitAlignment(exonhitmap, exoncompletemap, exonstartmap, exonendmap)
         else: #best_match_annotation is none
-            report.qname_2gene[qname] = ["*", 0] 
             report.num_cover_no_exons += 1   #as for alignment
 
             for op in read.cigartuples:
@@ -756,7 +710,6 @@ def eval_mapping_part(chro):
                 report.num_coverall_bad_alignment += 1
         if isGood:
             report.num_good_alignment += 1 #all the aligned exon are correct
-            report.good_name.append(read.qname)
         else:
             report.num_bad_alignment += 1
             
