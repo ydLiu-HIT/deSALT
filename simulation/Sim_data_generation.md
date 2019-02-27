@@ -1,6 +1,5 @@
 ## RNA-seq datasets generation for benchmark
 
-[![N|Solid](https://cldup.com/dTxpPi9lDf.thumb.png)](https://nodesource.com/products/nsolid)
 [![Build Status](https://travis-ci.org/joemccann/dillinger.svg?branch=master)](https://travis-ci.org/joemccann/dillinger)
 
 Due to there is no well-studied simulator for noisy long RNA-seq reads, we used PBSIM to generate synthetic datasets by a set of transcripts generated from a particular reference genome and corresponding annotations. Synthetic datasets were created from following genomes and annotations:
