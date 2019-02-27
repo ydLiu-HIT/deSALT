@@ -21,7 +21,7 @@ As we know, the annotation file download from Ensemble contains all the gene ann
 RNA-seq data is the products of gene transcription, but one gene may transcribe more than one isoforms due to alternative splicing of gene. What's more, an RNA aligner need to not only map exons to genome but also recognize isoforms of genes to reflect the gene structure. Thus, in order to reveal the performance of aligners mapping RNA-seq data to reference genome, we need to simulate RNA-seq data from different aspects to close to real data. In simulation, annotations for each species were seperated into three groups. The first group contains annotations for genes with single splicing isoform, the second group contains annotations for genes with alternative splicing isoforms, the third group contains annotations for genes with short exons (< 30bp). All annotations of each group will be output into files and suffixed by "_SS.gtf", "_AS.gtf" and "_short.gtf" separately. For alternative splicing genes, all isoforms will be extracted. Annotation grouping was down using Annotation_Load.py script in this repository, i.e.
 
 ```
-python Annotation_Load.py genome.gtf
+python Annotation_grouping.py genome.gtf
 ```
 ### 3. Generating transcriptomes
 Transcriptomes are generated from processed annotations and genome reference using the script generate_transcriptome.py (city from https://github.com/kkrizanovic/RNAseqEval) in this repository. Since the annotations were separated into three groups, a transcriptom (or a set of transcripts) was generated for each group.
