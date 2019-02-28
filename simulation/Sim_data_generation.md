@@ -101,7 +101,7 @@ python generate_transcriptome.py short.gtf Drosophila_melanogaster.BDGP6.fa shor
 
 cat AS_transcriptome.fa SS_transcriptome.fa short_transcriptome.fa > merge_transcriptome.fa
 
-python ../samscripts/src/fastqfilter.py minlen 200 merge_transcriptome.fa transcriptome_for_simulation.fa
+python samscripts/src/fastqfilter.py minlen 200 merge_transcriptome.fa transcriptome_for_simulation.fa
 
 mkdir CCS CLR ONT2D ONT1D
 
