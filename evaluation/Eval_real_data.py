@@ -8,13 +8,8 @@ import pysam
 from datetime import datetime
 from multiprocessing import Pool
 
-class ReportType:
-    FASTA_REPORT = 0
-    MAPPING_REPORT = 1
-    ANNOTATION_REPORT = 2
-
 class EvalReport:
-    def __init__(self, rtype = ReportType.MAPPING_REPORT):
+    def __init__(self):
         self.Num_Match = 0
         self.Num_MisMatch = 0
         self.Num_Insertion = 0
@@ -164,7 +159,7 @@ part_annotations = {}       # A dictionarry containing a list of annotations for
 
 def eval_mapping(sam_file, annotation_file, thread):
 
-    report = EvalReport(ReportType.MAPPING_REPORT)
+    report = EvalReport()
     #load annotation file
     sys.stderr.write('\n(%s) Loading and processing annotations file ... ' % datetime.now().time().isoformat())
     transcripts, gene_dict = Annotation_Load.Load_Annotation_From_GTF(annotation_file)
@@ -379,7 +374,7 @@ def eval_mapping_part(chro):
     transcripts = part_annotations[chro]
 
     expressed_genes = {}
-    report = EvalReport(ReportType.MAPPING_REPORT)
+    report = EvalReport()
     for trans in transcripts:
         expressed_genes[trans.transcriptname] = [0 for i in xrange(len(trans.exonitems) + 1)]
 

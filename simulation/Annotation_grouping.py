@@ -111,7 +111,7 @@ def paras_gene_dict(gene_dict, short_gene_dict, annotation_path):
     single_gene_list = list()
     multip_gene_list = list()
     short_gene_list = list()
-    limits = [700, 3000, 300] #AS, SS, short, corresponding gene numbers
+    limits = [700, 3000, 300] #AS, SS, short, corresponding gene numbers, can be changed by user
 
     for key in gene_dict.keys():
         if len(gene_dict[key]) > 1:

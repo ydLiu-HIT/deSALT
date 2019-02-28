@@ -9,7 +9,7 @@
 #include<string.h>
 #include <time.h>
 
-#include "tgs_index.h"
+#include "desalt_index.h"
 #include "read_seeding.h"
 #include "ktime.h"
 
@@ -25,8 +25,8 @@ static int usage(void)
 
 	fprintf(stderr, "Usage:		deSALT <command> [options]\n\n");
 	fprintf(stderr, "Command: \n");
-	fprintf(stderr, "		index		index reference sequence\n");
-	fprintf(stderr, "		aln		align long RNA sequence to reference\n");
+	fprintf(stderr, "		index	index reference sequence\n");
+	fprintf(stderr, "		aln	align long RNA sequence to reference\n");
 
 	fprintf(stderr, "\n");
 
@@ -39,8 +39,8 @@ int main(int argc, char *argv[])
 	realtime0 = realtime();
 	double ts = clock();
 	if (argc < 2)	return usage();
-	if (strcmp(argv[1], "index") == 0)	r = tgs_index(argc, argv);
-	else if (strcmp(argv[1], "aln") == 0)	r = tgs_aln(argc, argv, VERSION);
+	if (strcmp(argv[1], "index") == 0)	r = desalt_index(argc, argv);
+	else if (strcmp(argv[1], "aln") == 0)	r = desalt_aln(argc, argv, VERSION);
 	else if (strcmp(argv[1], "--help") == 0)	return help_usage();
 	else {
 		fprintf(stderr, "[Waring!!!] wrong command: '%s'\n", argv[1]);

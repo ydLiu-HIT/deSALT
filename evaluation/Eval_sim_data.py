@@ -1,40 +1,25 @@
 #! /usr/bin/python
 
 import sys, os
-import paramsparser
 import csv
-
+import re
+import copy
 from datetime import datetime
+
+
+import cal_background
 
 # To enable importing from samscripts submodulew
 SCRIPT_PATH = os.path.dirname(os.path.realpath(__file__))
 sys.path.append(os.path.join(SCRIPT_PATH, 'samscripts/src'))
 import Annotation_formats
-import cal_background
 import part_cal
-import RNAseqEval
-from report import EvalReport, ReportType
-from RNAseq_benchmark import benchmark_params
+import utility_sam
 from fastqparser import read_fastq
 
 # Determines whether to check the strand whene analyzing data
 # Due to complications in generating simulated RNA reads, this is False
 P_CHECK_STRAND = False
-
-# OLD: Predefined dictionaries for analyzing different datasets
-# simFolderDict_d1 = {'SimG1' : 'group1'
-#                   , 'SimG2' : 'group2'
-#                   , 'SimG3' : 'group3'}
-#
-# simFolderDict_all = {'SimG1' : 'group1'
-#                    , 'SimG2' : 'group2'
-#                    , 'SimG3' : 'group3'
-#                    , 'SimG1AS' : 'group1_AS'
-#                    , 'SimG1SS' : 'group1_SS'
-#                    , 'SimG2AS' : 'group2_AS'
-#                    , 'SimG2SS' : 'group2_SS'
-#                    , 'SimG3AS' : 'group3_AS'
-#                    , 'SimG3SS' : 'group3_SS'}
 
 
 # A dictionary connecting fasta/fastq header prefix with the folder with pbsim generated data
@@ -42,18 +27,15 @@ P_CHECK_STRAND = False
 # This is used because data is simulated using several pbsim runs to get different
 # coverages for different sets of references (in this case transcripts)
 # NOTE: this should be changed for different simulations
-simFolderDict = benchmark_params.simFolderDict
+#simFolderDict = benchmark_params.simFolderDict
+# OLD: Predefined dictionaries for analyzing different datasets
+simFolderDict = {'SimG1' : 'group1'
+               , 'SimG2' : 'group2'
+               , 'SimG3' : 'group3'}
+
 
 DEBUG = False
 #DEBUG = True
-
-paramdefs = {'--version' : 0,
-             '-v' : 0,
-             '--split-qnames' : 1,
-             '-sqn' : 0,
-             '--save_query_names' : 0,
-             '--debug' : 0,
-             '--print_mapping' : 1}
 
 # Obsolete
 def interval_equals(interval1, interval2, allowed_inacc = Annotation_formats.DEFAULT_ALLOWED_INACCURACY):
@@ -113,56 +95,184 @@ class Static:
         self.Hit100 = 0
         self.Hit80 = 0
 
-def processData(datafolder, resultfile, annotationfile, paramdict, Array, SS_list, csv_path):
+def load_and_process_SAM(sam_file, BBMapFormat = False):
+    # Loading SAM file into hash
+    # Keeping only SAM lines with regular CIGAR string, and sorting them according to position
+    qnames_with_multiple_alignments = {}
+    [sam_hash, sam_hash_num_lines, sam_hash_num_unique_lines] = utility_sam.HashSAMWithFilter(sam_file, qnames_with_multiple_alignments)
 
-    split_qnames = False
-    filename = ''
-    if '--split-qnames' in paramdict:
-        split_qnames = True
-        filename = paramdict['--split-qnames'][0]
+    # If variable BBMapFormat is set to true, all samfiles referring to the same query will be collected together
+    # Stil have to decide what to do with query names, currently removing '_part'
+    if BBMapFormat:
+        new_sam_hash = {}
+        for (qname, sam_lines) in sam_hash.iteritems():
+            pos = qname.find('_part')
+            if pos > -1:
+                origQname = qname[:pos]
+            else:
+                origQname = qname
+            if origQname not in new_sam_hash:
+                new_sam_hash[origQname] = sam_lines
+            else:
+                # import pdb
+                # pdb.set_trace()
+                new_sam_lines = sam_lines + new_sam_hash[origQname]
+                new_sam_hash[origQname] = sam_lines
 
-    filename_correct = filename + '_correct.names'
-    filename_hitall = filename + '_hitall.names'
-    filename_hitone = filename + '_hitone.names'
-    filename_bad = filename + '_incorrect.names'
-    filename_unmapped = filename + '_unmapped.names'
+        sam_hash = new_sam_hash
 
-    printMap = False
-    filename_mapping = ''
-    if '--print_mapping' in paramdict:
-        filename_mapping = paramdict['--print_mapping'][0]
-        printMap = True
+    # NOTE: This is a quick and dirty solution
+    # Setting this to true so that large deletions are turned into Ns
+    # BBMap marks intron RNA alignment gaps with deletions!
+    BBMapFormat = True
 
-    file_correct = None
-    file_hitall = None
-    file_hitone = None
-    file_bad = None
-    file_unmapped = None
-    folder = os.getcwd()
+    # Reorganizing SAM lines, removing unmapped queries, leaving only the first alignment and
+    # other alignments that possibly costitute a split alignment together with the first one
+    samlines = []
+    cnt = 0
+    pattern = '(\d+)(.)'
+    # for samline_list in sam_hash.itervalues():
+    for (samline_key, samline_list) in sam_hash.iteritems():
+        cnt += 1
+        if samline_list[0].cigar <> '*' and samline_list[0].cigar <> '':            # if the first alignment doesn't have a regular cigar string, skip
 
-    # If splittng qnames into files, have to open files first
-    if split_qnames:
-        file_correct = open(os.path.join(folder, filename_correct), 'w+')
-        file_hitall = open(os.path.join(folder, filename_hitall), 'w+')
-        file_hitone = open(os.path.join(folder, filename_hitone), 'w+')
-        file_bad = open(os.path.join(folder, filename_bad), 'w+')
+            if BBMapFormat:
+                # All deletes that are 10 or more bases are replaced with Ns of the same length
+                operations = re.findall(pattern, samline_list[0].cigar)
+                newcigar = ''
+                for op in operations:
+                    op1 = op[1]
+                    op0 = op[0]
+                    if op[1] == 'D' and int(op[0]) >= 10:
+                        op1 = 'N'
+                    newcigar += op0 + op1
+                samline_list[0].cigar = newcigar
 
-    # Loading results SAM file
-    report = EvalReport(ReportType.FASTA_REPORT)    # not really needed, used for unmapped query names
-    # Have to preserve the paramdict
-    # paramdict = {}
 
+            operations = re.findall(pattern, samline_list[0].cigar)
+            split = False
+
+            for op in operations[1:-1]:             # Ns cannot appear as the first or the last operation
+                if op[1] == 'N':
+                    split = True
+                    break
+            # If the first alignment is split (had Ns in the middle), keep only the first alignment and drop the others
+            if split:
+                # Transform split alignments containing Ns into multiple alignments with clipping
+                temp_samline_list = []
+                posread = 0
+                posref = 0      # NOTE: I don't seem to be using this, probably should remove it
+                newcigar = ''
+                readlength = samline_list[0].CalcReadLengthFromCigar()
+                new_samline = copy.deepcopy(samline_list[0])
+                mapping_pos = new_samline.pos
+                clipped_bases = new_samline.pos - new_samline.clipped_pos
+                hclip_seq = 0        # Used with hard clipping, how big part of sequence should be removed
+                clip_type = 'S'     # Soft_clipping by default
+                for op in operations:
+                    if op[1] == 'N' and int(op[0]) > 1:        # Create a new alignment with clipping
+                        newcigar += '%dS' % (readlength - posread)      # Always use soft clipping at the end
+                        new_samline.cigar = newcigar
+                        # After some deliberation, I concluded that this samline doesn't have to have its position changed
+                        # The next samline does, and by the size of N operation in cigar string + any operations before
+                        temp_samline_list.append(new_samline)
+                        new_samline = copy.deepcopy(samline_list[0])
+                        mapping_pos += int(op[0])
+                        new_samline.pos = mapping_pos
+                        new_samline.clipped_pos = new_samline.pos - clipped_bases
+                        posref += int(op[0])
+                        if clip_type == 'H':
+                            new_samline.seq = new_samline.seq[hclip_seq:]
+                        newcigar = '%d%c' % (posread, clip_type)
+                    else:                   # Expand a current alignment
+                        newcigar += op[0] + op[1]
+                        if op[1] in ('D', 'N'):
+                            posref += int(op[0])
+                            mapping_pos += int(op[0])
+                        elif op[1] == 'I':
+                            posread += int(op[0])
+                            # Everything besides deletes and Ns will be clipped in the next partial alignment
+                            # Therefore have to adjust both pos and clipped pos
+                            clipped_bases += int(op[0])
+                            hclip_seq += int(op[0])
+                        elif op[1] in ('S', 'H'):
+                            clip_type = op[1]
+                            # Clipped bases can not appear in the middle of the original cigar string
+                            # And they have already been added to the position,
+                            # so I shouldn't adjust my mapping_pos and clipped_bases again
+                            # TODO: I should probably diferentiate between hars and soft clipping
+                            posread += int(op[0])
+                            posref += int(op[0])
+                        else:
+                            posref += int(op[0])
+                            posread += int(op[0])
+                            clipped_bases += int(op[0])
+                            mapping_pos += int(op[0])
+                            hclip_seq += int(op[0])
+
+                new_samline.cigar = newcigar
+                temp_samline_list.append(new_samline)
+
+                samlines.append(temp_samline_list)
+            else:
+                temp_samline_list = [samline_list[0]]        # add the first alignment to the temp list
+                multi_alignment = False
+                for samline in samline_list[1:]:            # look through other alignments and see if they could form a split alignment with the current temp_samline_list
+                    if BBMapFormat:
+                        # All deletes that are 10 or more bases are replaced with Ns of the same length
+                        operations = re.findall(pattern, samline.cigar)
+                        newcigar = ''
+                        for op in operations:
+                            op0 = op[0]
+                            op1 = op[1]
+                            if op[1] == 'D' and int(op[0]) >= 10:
+                                op1 = 'N'
+                            newcigar += op0 + op1
+                        samline.cigar = newcigar
+                    if not join_split_alignment(temp_samline_list, samline):
+                        multi_alignment = True
+
+                samlines.append(temp_samline_list)
+        else:
+            pass
+
+    # Sorting SAM lines according to the position of the first alignment
+    samlines.sort(key = lambda samline: samline[0].pos)
+
+    
+    #for samline_list in samlines:
+    #    print samline_list[0].qname, samline_list[0].rname
+    return samlines
+
+def getChromName(header):
+    chromname = ''
+    longre = r'(chromosome )(\w*)'
+    shortre = r'(chr)(\w*)'
+
+    if header.find('mitochondrion') > -1 or header.find('chrM') > -1:
+        chromname = 'chrM'
+    else:
+        match1 = re.search(longre, header)
+        match2 = re.search(shortre, header)
+        if match1:
+            designation = match1.group(2)
+            chromname = 'chr%s' % designation
+        elif match2:
+            designation = match2.group(2)
+            chromname = 'chr%s' % designation
+        else:
+            chromname = 'genome'
+
+    return chromname
+
+
+def processData(datafolder, resultfile, annotationfile, Array, SS_list, csv_path):
     sys.stderr.write('\n(%s) Loading and processing SAM file with mappings ... ' % datetime.now().time().isoformat())
-    all_sam_lines = RNAseqEval.load_and_process_SAM(resultfile, paramdict, report, BBMapFormat = True)
-
+    all_sam_lines = load_and_process_SAM(resultfile, BBMapFormat = True)
 
     # Reading annotation file
     annotations = Annotation_formats.Load_Annotation_From_File(annotationfile)
-
-    mapfile = None
-    if printMap:
-        mapfile = open(filename_mapping, 'w+')
-
+    
     # Hashing annotations according to name
     annotation_dict = {}
     for annotation in annotations:
@@ -367,7 +477,7 @@ def processData(datafolder, resultfile, annotationfile, paramdict, Array, SS_lis
         parteqmap = {(i+1):0 for i in xrange(numparts)}
         parthitmap = {(i+1):0 for i in xrange(numparts)}
 
-        if RNAseqEval.getChromName(samline_list[0].rname) != RNAseqEval.getChromName(annotation.seqname):
+        if getChromName(samline_list[0].rname) != getChromName(annotation.seqname):
             pass
         else:
             for samline in samline_list:
@@ -531,54 +641,19 @@ if __name__ == '__main__':
     if (len(sys.argv) < 2):
         verbose_usage_and_exit()
 
-    mode = sys.argv[1]
+    datafolder = sys.argv[1]
+    resultfile = sys.argv[2]
+    annotationfile = sys.argv[3]
+    group_list = sys.argv[4]
+    ss_list = sys.argv[5]
+    as_list = sys.argv[6]
+    csv_path = sys.argv[7]
 
-    if (mode == 'process'):
-        if (len(sys.argv) < 9):
-            sys.stderr.write('Processes a folder containing data generated by pbsim.\n')
-            sys.stderr.write('Joins all generated reads into a single FASTQ file.\n')
-            sys.stderr.write('Expands existing headers with the name of originating reference.\n')
-            sys.stderr.write('Usage:\n')
-            sys.stderr.write('%s %s <pbsim data folder> <results file> <annotations file> <options>\n'% (sys.argv[0], sys.argv[1]))
-            sys.stderr.write('\n')
-            sys.stderr.write('\noptions:\n')
-            sys.stderr.write('\t\t--split-qnames: while calculating the statistics also sorts query names\n')
-            sys.stderr.write('\t\t                into four files - file_correct.names, file_hitall.names\n')
-            sys.stderr.write('\t\t                                  file_hitone.names, file_bad.names\n')
-            sys.stderr.write('\t\t--print_mapping [filename]: Print information about actual and expected alignments\n')
-            sys.stderr.write('\t\t                into a give text file.\n')
-            sys.stderr.write('\n')
-            exit(1)
+    Array = cal_background.process(datafolder, group_list, annotationfile, ss_list, as_list)
 
-        datafolder = sys.argv[2]
-        resultfile = sys.argv[3]
-        annotationfile = sys.argv[4]
-        group_list = sys.argv[5]
-        ss_list = sys.argv[6]
-        as_list = sys.argv[7]
-        csv_path = sys.argv[8]
+    print "Total reads: ", Array.Total_reads
+    print "Total bases: ", Array.Total_bases
+    print "Total exons:", Array.Total_expected_exons
 
-        #Total_reads = int(sys.argv[5])
 
-        pparser = paramsparser.Parser(paramdefs)
-        paramdict = pparser.parseCmdArgs(sys.argv[9:])
-        paramdict['command'] = ' '.join(sys.argv)
-
-        Array = cal_background.process(datafolder, group_list, annotationfile, ss_list, as_list)
-
-        print "Total reads: ", Array.Total_reads
-        print "Total bases: ", Array.Total_bases
-        print "Total exons:", Array.Total_expected_exons
-        #print Array.Total_reads, Array.Total_bases, Array.Total_expected_exons
-        #print Array.Total_level2_reads, Array.Total_level2_bases, Array.Total_level2_expected_exons
-        #print Array.Total_level2_r_reads, Array.Total_level2_r_bases, Array.Total_level2_r_expected_exons
-        #print Array.Total_level3_AS_reads, Array.Total_level3_AS_bases, Array.Total_level3_AS_expected_exons
-        #print Array.Total_level3_SS_reads, Array.Total_level3_SS_bases, Array.Total_level3_SS_expected_exons
-        #print Array.Total_level4_2_5_reads, Array.Total_level4_2_5_bases, Array.Total_level4_2_5_expected_exons
-        #print Array.Total_level4_6_9_reads, Array.Total_level4_6_9_bases, Array.Total_level4_6_9_expected_exons
-        #print Array.Total_level4_10_reads, Array.Total_level4_10_bases, Array.Total_level4_10_expected_exons
-
-        processData(datafolder, resultfile, annotationfile, paramdict, Array, ss_list, csv_path)
-
-    else:
-        print 'Invalid mode!'
+    processData(datafolder, resultfile, annotationfile, Array, ss_list, csv_path)

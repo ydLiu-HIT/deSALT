@@ -13,7 +13,6 @@
 #include <assert.h>
 #include <math.h>
 #include <pthread.h>
-// #include <time.h>
 
 #include "read_seeding.h"
 #include "bit_operation.h"
@@ -22,6 +21,7 @@
 #include "graph.h"
 #include "bseq.h"
 #include "aln_2pass.h"
+#include "desalt_index.h"
 //#include "aln_with_gtf.h"
 
 //variable extern
@@ -1618,8 +1618,8 @@ void print_ref()
     fprintf(stderr, "\n");
 }
 
-int tgs_aln(int argc, char *argv[], const char *version)
-{
+int desalt_aln(int argc, char *argv[], const char *version)
+{ 
 	param_map *opt = (param_map* )calloc(1, sizeof(param_map));
 	init_map_param(opt);
 	int c;
@@ -1628,8 +1628,6 @@ int tgs_aln(int argc, char *argv[], const char *version)
     sprintf(command, "@PG\tID:deSALT\tPN:deSALT\tVN:%s\tCL:%s", version, argv[0]);
     for (c = 1; c < argc; ++c) sprintf(command+strlen(command), " %s", argv[c]);
 
-    printf("cmd = %s\n", argv[0]);
- 
     TEMP_INDEX = 2;
 
 	while((c = getopt_long(argc, argv, short_option, long_option, NULL)) != -1)
@@ -1730,7 +1728,33 @@ int tgs_aln(int argc, char *argv[], const char *version)
         exit(1);
 	}
 
-	fprintf(stderr, "error_overall = %f, ins = %f, del = %f\n", opt->error_overall, opt->error_ins, opt->error_del);
+
+    if (opt->with_gtf)
+    {
+        //get the folder of deSALT
+        char dir[1024];
+        char desalt_dir[1024];
+        char path_anno_load[1024];
+        int r;
+        r = readlink("/proc/self/exe", dir, 2048);
+        if (r < 0 || r >= 2048)
+            fprintf(stderr, "Failed\n");
+        dir[r] = '\0';
+
+        if (!get_bin_dir(dir, desalt_dir))
+        {
+            strcat(desalt_dir, "/");
+        }
+
+        strcpy(path_anno_load, desalt_dir);
+        strcat(path_anno_load, "Annotation_Load.py");
+
+        if ((access(path_anno_load, F_OK)) == -1)
+        {    
+            fprintf(stderr, "[Wrong!]: %s is not exist, please check!\n", path_anno_load);
+            exit(1);
+        }
+    }
 
 	char *index_dir;
 	char *read_fastq;

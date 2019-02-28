@@ -277,6 +277,6 @@ extern int TEMP_INDEX;
 uint64_t read_bit1[MAX_PTHREAD][2][((MAX_READLEN - 1) >> 5) + 1]; //  MAX_READLEN=2048  ((MAX_READLEN - 1) >> 5) + 1 = 64
 
 int help_usage();
-int tgs_aln(int argc, char *argv[], const char *version);
+int desalt_aln(int argc, char *argv[], const char *version);
 
 #endif
