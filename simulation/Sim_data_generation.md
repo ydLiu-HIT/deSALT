@@ -89,7 +89,7 @@ The ONT1D-like reads:
 
 ---
 ### One example for generation simulation dataset
-Here is the pipeline of reads simulation, take fruitfly reference and annotations for example. The genome and annotations can be found in the same folder.
+Here is the pipeline of reads simulation, take fruitfly reference and annotations for example.
 ```
 python Annotation_grouping.py Drosophila_melanogaster.BDGP6.94.gtf
 
@@ -122,7 +122,7 @@ bash simulate_ONT1D.sh
 cd ..
 ```
 
-The content of simulate_CCS.sh, bash simulate_CLR.sh, bash simulate_ONT2D.sh and bash simulate_ONT1D.sh are similar, the difference is the parameters for simulation different type of reads and sequencing depth. Here is an example of simulate_CCS.sh:
+The content of simulate_CCS.sh, simulate_CLR.sh, simulate_ONT2D.sh and simulate_ONT1D.sh are similar, the difference is the parameters for simulation different type of reads and sequencing depth. Here is an example of simulate_CCS.sh:
 ```
 mkdir group1 group2 group3
 
@@ -179,3 +179,5 @@ mv g3.fastq dataset_sim_dm_CCS_g3.fastq
 cat dataset_sim_dm_CCS_g1.fastq dataset_sim_dm_CCS_g2.fastq dataset_sim_dm_CCS_g3.fastq > dataset_sim_dm_CCS.fastq
 ```
 `tran_qname.py` : change read name by group like "SimG1_S". It was important for evaluation alignment results later.
+
+All the script, pipeline, genome and annotations are in `Example` folder.
