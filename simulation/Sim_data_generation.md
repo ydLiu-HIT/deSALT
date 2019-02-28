@@ -109,15 +109,15 @@ cd CCS
 bash simulate_CCS.sh
 cd ..
 
-cd CCS
+cd CLR
 bash simulate_CLR.sh
 cd ..
 
-cd CCS
+cd ONT2D
 bash simulate_ONT2D.sh
 cd ..
 
-cd CCS
+cd ONT1D
 bash simulate_ONT1D.sh
 cd ..
 ```
