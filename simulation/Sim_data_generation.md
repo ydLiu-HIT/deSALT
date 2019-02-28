@@ -42,7 +42,7 @@ The merged transcriptome in previouse step was used for simulation. In order to 
 The CCS-like reads:
 pbsim 	Transcripome_File (human, mouse, fruitfly) \
         --data-type CCS \
-        --model_qc model_qc_clr	 \
+      	--model_qc model_qc_ccs	 \
         --length-mean 6000 \
         --length-min 100
         --difference-ratio 75:5:20 \
@@ -130,7 +130,7 @@ cd group1
 
 pbsim 	transcriptome_for_simulation.fa \
         --data-type CCS \
-        --model_qc model_qc_clr	 \
+        --model_qc model_qc_ccs	 \
         --length-mean 6000 \
         --length-min 100
         --difference-ratio 75:5:20 \
@@ -142,7 +142,7 @@ cd ../group2
 
 pbsim 	transcriptome_for_simulation.fa \
         --data-type CCS \
-        --model_qc model_qc_clr	 \
+        --model_qc model_qc_ccs	 \
         --length-mean 6000 \
         --length-min 100
         --difference-ratio 75:5:20 \
@@ -154,7 +154,7 @@ cd ../group3
 
 pbsim 	transcriptome_for_simulation.fa \
         --data-type CCS \
-        --model_qc model_qc_clr	 \
+        --model_qc model_qc_ccs	 \
         --length-mean 6000 \
         --length-min 100
         --difference-ratio 75:5:20 \
