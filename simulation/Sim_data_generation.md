@@ -2,6 +2,8 @@
 
 [![Build Status](https://travis-ci.org/joemccann/dillinger.svg?branch=master)](https://travis-ci.org/joemccann/dillinger)
 
+The simulation study was inspired by https://github.com/kkrizanovic/RNAseqEval, and make some difference and important to our study.
+
 Due to there is no well-studied simulator for noisy long RNA-seq reads, we used PBSIM to generate synthetic datasets by a set of transcripts generated from a particular reference genome and corresponding annotations. Synthetic datasets were created from following genomes and annotations:
   - Homo Sapiens GRCh38 (human) Reference genome, and annotations (version 94) from Ensemble.
   - Mus Musculus GRCm38 (mouse) Reference genome, and annotations (version 94) from Ensemble.
