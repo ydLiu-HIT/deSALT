@@ -180,4 +180,4 @@ cat dataset_sim_dm_CCS_g1.fastq dataset_sim_dm_CCS_g2.fastq dataset_sim_dm_CCS_g
 ```
 `tran_qname.py` : change read name by group like "SimG1_S". It was important for evaluation alignment results later.
 
-All the script, pipeline, genome and annotations are in `Example` folder.
+All the scripts, pipeline, genome and annotations are in `Example` folder.
