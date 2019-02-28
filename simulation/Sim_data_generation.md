@@ -105,4 +105,77 @@ python ../samscripts/src/fastqfilter.py minlen 200 merge_transcriptome.fa transc
 
 mkdir CCS CLR ONT2D ONT1D
 
+cd CCS
+bash simulate_CCS.sh
+cd ..
+
+cd CCS
+bash simulate_CLR.sh
+cd ..
+
+cd CCS
+bash simulate_ONT2D.sh
+cd ..
+
+cd CCS
+bash simulate_ONT1D.sh
+cd ..
 ```
+
+The content of simulate_CCS.sh, bash simulate_CLR.sh, bash simulate_ONT2D.sh and bash simulate_ONT1D.sh are similar, the difference is the parameters for simulation different type of reads and sequencing depth. Here is an example of simulate_CCS.sh:
+```
+mkdir group1 group2 group3
+
+cd group1
+
+pbsim 	transcriptome_for_simulation.fa
+        --data-type CCS \
+        --model_qc model_qc_clr	 \
+        --length-mean 6000 \
+        --length-min 100
+        --difference-ratio 75:5:20 \
+        --accuracy-mean 0.98 \
+        --accuracy-min 0.8 \
+        --depth 4
+
+cd ../group2
+
+pbsim 	transcriptome_for_simulation.fa
+        --data-type CCS \
+        --model_qc model_qc_clr	 \
+        --length-mean 6000 \
+        --length-min 100
+        --difference-ratio 75:5:20 \
+        --accuracy-mean 0.98 \
+        --accuracy-min 0.8 \
+        --depth 10
+	
+cd ../group3
+
+pbsim 	transcriptome_for_simulation.fa
+        --data-type CCS \
+        --model_qc model_qc_clr	 \
+        --length-mean 6000 \
+        --length-min 100
+        --difference-ratio 75:5:20 \
+        --accuracy-mean 0.98 \
+        --accuracy-min 0.8 \
+        --depth 30
+	
+cd ..
+
+#merge all the reads together in each group
+cat group1/*.fastq >dataset_sim_dm_CCS_g1.fastq  #4x
+cat group2/*.fastq >dataset_sim_dm_CCS_g2.fastq  #10x
+cat group3/*.fastq >dataset_sim_dm_CCS_g3.fastq  #30x
+
+python tran_qname.py dataset_sim_dm_CCS_g1.fastq SimG1_S g1.fastq
+mv g1.fastq dataset_sim_dm_CCS_g1.fastq
+python tran_qname.py dataset_sim_dm_CCS_g2.fastq SimG2_S g2.fastq
+mv g2.fastq dataset_sim_dm_CCS_g2.fastq
+python tran_qname.py dataset_sim_dm_CCS_g3.fastq SimG3_S g3.fastq
+mv g3.fastq dataset_sim_dm_CCS_g3.fastq
+
+cat dataset_sim_dm_CCS_g1.fastq dataset_sim_dm_CCS_g2.fastq dataset_sim_dm_CCS_g3.fastq > dataset_sim_dm_CCS.fastq
+```
+`tran_qname.py` : change read name by group like "SimG1_S". It was important for evaluation alignment results later.
