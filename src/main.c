@@ -47,7 +47,7 @@ int main(int argc, char *argv[])
 		return 1;
 	}
 	if (!r)
-		fprintf(stderr, "[Main:] Real time: %.3f sec; CPU: %.3f sec, Memory peak: %.2f GB\n", realtime() - realtime0, cputime(), peak_memory() / 1024.0 / 1024.0 / 1024.0);
+		fprintf(stderr, "[Main] Real time: %.3f sec; CPU: %.3f sec, Memory peak: %.2f GB\n", realtime() - realtime0, cputime(), peak_memory() / 1024.0 / 1024.0 / 1024.0);
 
 	return 0;
 }

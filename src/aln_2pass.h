@@ -2,7 +2,6 @@
 	> File Name: aln_2pass.h
 	> Author: 
 	> Mail: 
-	> Created Time: 2018年01月20日 星期六 15时33分56秒
  ************************************************************************/
 
 #ifndef _ALN_2PASS_H
@@ -51,7 +50,6 @@ typedef struct THREAD_2PASS
 	ksw_extz_t ez;
 	ksw_extz_t ez2;
 	param_map *map;
-	// seq_io *seqio;
 	dpSkeleton_t *dp_skeleton;
 	TARGET_t *anchor_map2ref;
 	void *km;
@@ -60,7 +58,6 @@ typedef struct THREAD_2PASS
 REF_t** REF_pos;
 QUERY_t** QUERY_pos;
 uint8_t **strand_arr;
-//TARGET_t* anchor_map2ref;
 EXON_t* EXON_T;
 seq_io* seqio;
 
@@ -70,8 +67,7 @@ uint8_t splice_offset;
 uint8_t hash_kmer;
 uint8_t e_shift;
 
-void load_fasta_2pass(uint32_t map2ref_cnt, param_map *opt, char *read_fastq);
-// void load_fasta_2pass_with_annotation(uint32_t map2ref_cnt, param_map *opt, char *read_fastq);
+void load_fasta_2pass(uint32_t map2ref_cnt, param_map *opt, char *read_fastq, int *load_fasta_2pass);
 void test_main(param_map *opt);
 void ksw_init();
 void ksw_free_mem();
@@ -83,7 +79,7 @@ int find_chr_n_by_name(char *chr_name);
 int chromosome_judge(uint32_t position, uint32_t *chromosome_begin);
 void mm_append_cigar(_aln_t *aln, uint32_t n_cigar, uint32_t *cigar);
 void copy_aln_value(_aln_t *aln1, _aln_t *aln2, uint32_t read_line);
-void mm_update_extra(_aln_t *aln, uint8_t *qseq, uint8_t *tseq, uint32_t qlen, uint32_t tlen, uint32_t *qs, uint32_t *ts, uint8_t q, uint8_t e, char *seqname);
+void mm_update_extra(_aln_t *aln, uint8_t *qseq, uint8_t *tseq, uint32_t qlen, uint32_t tlen, uint32_t *qs, uint32_t *ts, uint8_t q, uint8_t e);
 uint32_t append_intron_to_cigar(void *km, ksw_extz_t *ez, uint32_t pre_pos, uint32_t intron_pos, uint32_t intron_len);
 void check_more_part(uint32_t *cigar, uint32_t *n_cigar, int *score, int q2);
 void check_cigar(uint8_t *qseq, uint8_t *tseq, uint32_t *cigar, uint32_t *n_cigar, uint32_t *qs, uint32_t *ts, int *score, uint32_t qlen, uint32_t tlen, uint32_t boundary, uint8_t type, param_map *opt);

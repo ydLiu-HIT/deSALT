@@ -2,14 +2,12 @@
 	> File Name: bseq.c
 	> Author: 
 	> Mail: 
-	> Created Time: 2017年12月11日 星期一 13时58分41秒
  ************************************************************************/
 
 #include<stdio.h>
 #include<stdlib.h>
 #include "bseq.h"
 #include "kseq.h"
-// #include "read_seeding.h"
 
 KSEQ_INIT(gzFile, gzread)
 

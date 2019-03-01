@@ -2,39 +2,6 @@
 #include "binarys_qsort.h"
 #include "read_seeding.h"
 #include "aln_2pass.h"
-//#include "aln_with_gtf.h"
-
-//binary search offset
-// #ifdef UNPIPATH_OFF_K20
-// int64_t binsearch_offset64(uint32_t x, uint32_t v[], int64_t n, uint64_t offset)
-// #else
-// int64_t binsearch_offset(uint32_t x, uint32_t v[], int64_t n, uint32_t offset)
-// #endif
-// {
-//     int64_t low, high, mid;
-
-//     low = 0;
-//     high = n - 1;
-
-//     while ( low <= high )
-//     {
-//         mid = ((int64_t )(low + high)) >> 1;
-//         if(x < v[mid + offset])
-//         {
-//             high = mid - 1;
-//         }
-//         else if(x > v[mid + offset])
-//         {
-//             low = mid + 1;
-//         }
-//         else  /*found match*/
-//         {
-//             return (int64_t )(mid + offset);
-//         }
-//     }
-
-//     return -1;
-// }
 
 int binsearch_range(uint64_t key, uint32_t *v, int64_t n,  int64_t *range, uint8_t k_off)
 {
@@ -168,10 +135,6 @@ int multi_binsearch_offset(uint32_t x, uint32_t v[], int64_t n, uint32_t offset,
     return -1;
 }
 
-
-
-
-//seed_id_r = binsearch_interval_unipath64(kmer_pos_uni, buffer_seqf, result_seqf);
 int64_t binsearch_interval_unipath64(uint64_t x, uint64_t v[], uint64_t n)
 {
     int64_t low, high, mid;

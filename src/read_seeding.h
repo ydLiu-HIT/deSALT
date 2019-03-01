@@ -2,7 +2,6 @@
 	> File Name: read_seeding.h
 	> Author: 
 	> Mail: 
-	> Created Time: 2017年04月11日 星期二 15时07分43秒
  ************************************************************************/
 
 #ifndef _READ_SEEDING_H
@@ -38,19 +37,12 @@
 #define TEMP_FILE_PERFIRX "1pass_anchor"
 #define OUTPUT "./aln.sam"
 
-
-#define UNPIPATH_OFF_K20
-#define UNI_SEQ64
-#define HASH_KMER_READ_J
-
 #define MAX_PTHREAD 48
 #define MAX_READLEN 1000000 //2^15+1 > readlen_max = 30000
 #define SPLICDISTANCE 200000   //200000 shuold be better
 //#define Annoation
 
 pthread_rwlock_t rwlock;
-
-typedef struct { uint64_t x, y; } mm128_t;
 
 typedef struct READ
 {
@@ -91,7 +83,6 @@ typedef struct ISOFORM
 
 typedef struct vertex_MEM
 {
-	// uint32_t id;
 	uint64_t uid;
 	uint32_t seed_id;
 	uint32_t read_pos;
@@ -119,9 +110,6 @@ typedef struct UNI_SEED
 	uint32_t ref_begin;
 	uint32_t ref_end;
 	uint32_t cov;
-
-    //added
-    uint64_t uid;
 }uni_seed;
 
 typedef struct{
@@ -178,17 +166,14 @@ typedef struct{
 
 }param_map;
 
-
 typedef struct
 {
 	int32_t dp_score, dp_max, dp_max2;  // DP score; score of the max-scoring segment; score of the best alternate mappings
 	uint32_t n_ambi; // number of ambiguous bases; transcript strand: 0 for unknown, 1 for +, 2 for -
-	// int32_t qs, qe, rs, re;         // query start and end; reference start and end
 	int32_t mlen, blen;             // seeded exact match length; seeded alignment block length
 	int chr_n;
 	uint16_t flag:10;
 	uint32_t _1_based_pos;
-	// uint16_t mapq:10;
 
 	uint32_t n_cigar;                   // number of cigar operations in cigar[]
 	uint32_t *cigar;
@@ -205,7 +190,7 @@ typedef struct SEQIOIN
 	uint8_t mapable;
 	uint8_t multi_n;  //multiple alignment count
 	uint16_t mapq;
-	_aln_t *aln; //point 
+	_aln_t *aln; //pointer
 }seq_io;
 
 //DP result
@@ -219,7 +204,6 @@ typedef struct ANCHOR
 
 typedef struct DP_RESULT
 {
-	// uint32_t read_i;
 	uint8_t multi_n;
 	anchor_t *point;
 } dpSkeleton_t;
@@ -237,17 +221,17 @@ vertex_u*** vertexu;
 READ_t* query_info;
 
 //variable in this file
-uint32_t seed_num;
 uint8_t k_r;
 uint8_t re_b;
 uint8_t re_bt;
 uint8_t re_2bt;
+uint8_t top_n;
 uint8_t seed_step;
 uint8_t seed_offset;
 uint16_t pos_n_max;
 uint16_t uni_pos_n_max;
 int batch_size;
-uint8_t top_n;
+int seed_num;
 float secondary_ratio;
 int min_chain_score;
 int max_read_join_gap;
@@ -272,9 +256,8 @@ extern uint16_t Eindel;
 extern uint8_t thread_n;
 extern uint32_t max_intron_length;
 extern int waitingLen;
-extern int TEMP_INDEX;
 
-uint64_t read_bit1[MAX_PTHREAD][2][((MAX_READLEN - 1) >> 5) + 1]; //  MAX_READLEN=2048  ((MAX_READLEN - 1) >> 5) + 1 = 64
+uint64_t read_bit1[MAX_PTHREAD][2][((MAX_READLEN - 1) >> 5) + 1];
 
 int help_usage();
 int desalt_aln(int argc, char *argv[], const char *version);

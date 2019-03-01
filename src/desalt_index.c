@@ -16,7 +16,7 @@ int desalt_index_usage(void)
 {
 	fprintf(stderr, "\n");
 	fprintf(stderr, "Usage:	deSALT index <ref.fa> <index_route>\n");
-	fprintf(stderr, "		build deBGA index file. You can get more deBGA information from https://github.com/HongzheGuo/deBGA");
+	fprintf(stderr, "		build deBGA index file with default 22-kmer. You can get more deBGA information from https://github.com/HongzheGuo/deBGA");
 	fprintf(stderr, "\n");
 	return 1;
 }

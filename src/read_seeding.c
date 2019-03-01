@@ -1,8 +1,7 @@
 /*************************************************************************
 	> File Name: read_seeding.c
-	> Author: 
+	> Author: Yadong Liu
 	> Mail: 
-	> Created Time: 2017年04月11日 星期二 15时07分53秒
  ************************************************************************/
 
 #include <stdio.h>
@@ -22,7 +21,6 @@
 #include "bseq.h"
 #include "aln_2pass.h"
 #include "desalt_index.h"
-//#include "aln_with_gtf.h"
 
 //variable extern
 uni_seed*** uniseed = NULL;
@@ -38,25 +36,21 @@ int readlen_max;
 uint16_t Eindel ; //less than 0.01% of intron length less than 20bp
 uint32_t max_intron_length;
 int waitingLen;
-int TEMP_INDEX;
 
 char *sam_path = NULL;
 FILE *fp_sam = NULL;
 
 //varibale in this file
-uint8_t k_first_level = 14; //一级列表
+uint8_t k_first_level = 14;
 uint32_t map2ref_cnt = 0;
-uint32_t map2ref_cnt_secondary = 0;
-uint32_t map2ref_cnt_primary = 0;
 uint32_t *map2ref_cnt_arr = NULL;
 int THREAD_READ_I;
 int TOTAL_READ_COUNTs;
 char command[1024];
+uint8_t read_type = 5;
 
-
-uint8_t read_type;
 static void init_map_param(param_map *opt)
-{ 	//4,2,24,1,2,4
+{ 	
 	opt->gap_open_D = 2; //4
 	opt->gap_ex_D = 1; //2
 	opt->gap_open2_D = 24; //24
@@ -95,7 +89,7 @@ static void init_map_param(param_map *opt)
 	// opt->max_sw_mat = 4000000000;
 	opt->max_sw_mat = 1000000000;
 	opt->Eindel = 20;
-	opt->thread_n = 1;
+	opt->thread_n = 4;
 	opt->top_n = 5; //2, 3
 	opt->k_t = 22;
 	opt->e_shift = 5;
@@ -160,7 +154,7 @@ static void ksw_gen_mat_D(param_map *opt)
 }
 
 
-static inline void filter_bad_seed(vertex_u **vertexU, uint32_t *vertexNum, uint32_t *uniseed_length, uint8_t tid)
+static inline void expand_seed(vertex_u **vertexU, uint32_t *vertexNum, uint32_t *uniseed_length, uint8_t tid)
 {
 	uint8_t r_c;
 	uint32_t i, m;
@@ -185,9 +179,6 @@ static inline void filter_bad_seed(vertex_u **vertexU, uint32_t *vertexNum, uint
 				uniseed[tid][r_c][su_i].ref_begin =  buffer_p[m + buffer_pp[vertexU[r_c][i].uid]] + vertexU[r_c][i].uni_pos_off - 1;
 				uniseed[tid][r_c][su_i].ref_end = uniseed[tid][r_c][su_i].ref_begin + vertexU[r_c][i].length2 - 1;
 				uniseed[tid][r_c][su_i].cov = vertexU[r_c][i].cov;
-
-                //added
-                uniseed[tid][r_c][su_i].uid = vertexU[r_c][i].uid;
 				su_i++;
 			}
 		}
@@ -284,7 +275,6 @@ int single_seed_reduction_core_single64(uint64_t (*read_bit)[((MAX_READLEN - 1) 
 
 	uint32_t read_pos = 0;
 	uint32_t mem_length = 0;
-	//uint16_t rt_pos = 0;
 	int64_t seed_binary[2] = {0,0};
 
 	uint32_t memid[2] = {0,0};
@@ -313,13 +303,12 @@ int single_seed_reduction_core_single64(uint64_t (*read_bit)[((MAX_READLEN - 1) 
         read_off = 0;
 		for(read_off = 0; read_off <= read_length - seed_k_t; read_off += seed_step) //every seed_l[tid] we choose a seed
 		{
-			// 如果当前取得的seed在之前seed的exact match之内，直接跳过。
 			if(read_off + seed_k_t - 1 <= r_b_v)
 			{
 				continue;
 			}
 
-			re_d = (read_off & 0X1f);/////re_d = read_off & 00011111 = read_off while read_off < 31  32个循环
+			re_d = (read_off & 0X1f);/////re_d = read_off & 00011111 = read_off while read_off < 31 , 32 loop
 
 			if(re_d <= re_b)  //re_b = 32 - seed_k_t
 			{
@@ -345,7 +334,7 @@ int single_seed_reduction_core_single64(uint64_t (*read_bit)[((MAX_READLEN - 1) 
 			}
 			else if (seed_k_t == k_first_level)
 			{
-				seed_hash = kmer_bit; //一级列表
+				seed_hash = kmer_bit; //
 
 				seed_binary[0] = 0;
 				seed_binary[0] += buffer_hash_g[seed_hash];
@@ -356,21 +345,16 @@ int single_seed_reduction_core_single64(uint64_t (*read_bit)[((MAX_READLEN - 1) 
 			}
 			else
 			{
-				seed_kmer = (kmer_bit & bit_tran[k_r]); //二级列表
+				seed_kmer = (kmer_bit & bit_tran[k_r]); 
 
-				seed_hash = (kmer_bit >> (k_r << 1)); //一级列表
-
-				//result = multi_binsearch_offset64(seed_kmer, buffer_kmer_g, buffer_hash_g[seed_hash + 1] - buffer_hash_g[seed_hash], buffer_hash_g[seed_hash], seed_binary, seed_offset);
+				seed_hash = (kmer_bit >> (k_r << 1));
 				
 				result = binsearch_range(seed_kmer, buffer_kmer_g + buffer_hash_g[seed_hash], buffer_hash_g[seed_hash + 1] - buffer_hash_g[seed_hash], seed_binary, seed_offset<<1);
 
-				//如果没找到kemr，或者找到的kmer大于uid_match_max，则忽略该kmer  需要考虑：是否需要将这个判断放在seed_id_r后面，因为不确定kmer能不能和seed_id_r一一对应
 				if (result == -1)
 				{
-					// printf("Can not find the kmer\n");
 					continue;
 				}
-                //fprintf(stderr, "result found\n");
 				seed_binary[0] += buffer_hash_g[seed_hash];
 				seed_binary[1] += buffer_hash_g[seed_hash];
 			}
@@ -378,9 +362,7 @@ int single_seed_reduction_core_single64(uint64_t (*read_bit)[((MAX_READLEN - 1) 
 			max_right_i = 0;
 			hit_binary0 = seed_binary[0];
 			hit_binary1 = seed_binary[1];
-            //fprintf(stderr, "seed_binary0 = %ld, seed_binary1 = %ld, mem_i = %d\n", hit_binary0, hit_binary1, mem_i);
 
-            //fprintf(stderr, "mem_i = %d, hit1 = %ld, hit0 = %ld, new_seed_cnt = %d\n", mem_i, hit_binary1, hit_binary0, new_seed_cnt);
 			if ((hit_binary1 - hit_binary0) > uni_pos_n_max)
 			{
 				continue;
@@ -392,17 +374,10 @@ int single_seed_reduction_core_single64(uint64_t (*read_bit)[((MAX_READLEN - 1) 
 			for (hit_i = hit_binary0; hit_i <= hit_binary1; ++hit_i)
 			{
 				kmer_pos_uni = buffer_off_g[hit_i];//this kmer's offset on unipath seq
-#ifdef UNPIPATH_OFF_K20
 				//find the UID of this kmer
 				seed_id_r = binsearch_interval_unipath64(kmer_pos_uni, buffer_seqf, result_seqf);
-#else
-				seed_id_r = binsearch_interval_unipath(kmer_pos_uni, buffer_seqf, result_seqf);
-#endif
 
-                //fprintf(stderr, "uid = %ld, unipath_len = %d\n", seed_id_r, buffer_seqf[seed_id_r + 1] - buffer_seqf[seed_id_r]);
-				//为什么不是buffer_pp[seed_id_r] - buffer_pp[seed_id_r -1];
 				ref_pos_n = buffer_pp[seed_id_r + 1] - buffer_pp[seed_id_r];
-                //fprintf(stderr, "ref_pos_n = %d\n", ref_pos_n);
 				if (ref_pos_n > pos_n_max)
 				{
 					continue;
@@ -412,33 +387,20 @@ int single_seed_reduction_core_single64(uint64_t (*read_bit)[((MAX_READLEN - 1) 
 				//extend the kmer to a exact match 
  				for(left_i = 1; (left_i <= uni_offset_s_l) && (left_i <= read_off); left_i++)
  				{
-#ifdef UNI_SEQ64
 					if(((buffer_seq[(kmer_pos_uni - left_i) >> 5] >> ((31 - ((kmer_pos_uni - left_i) & 0X1f)) << 1)) & 0X3)
 					        != ((read_bit[r_i][(read_off - left_i) >> 5] >> ((31 - ((read_off - left_i) & 0X1f)) << 1)) & 0X3)
 					        ) break;
-#else
-					if(((buffer_seq[(kmer_pos_uni - left_i) >> 2] >> (((kmer_pos_uni - left_i) & 0X3) << 1)) & 0X3)
-					        != ((read_bit[r_i][(read_off - left_i) >> 5] >> ((31 - ((read_off - left_i) & 0X1f)) << 1)) & 0X3)
-					        ) break;
-#endif
 				}
 
 				for(right_i = 1; (right_i <= uni_offset_s_r) && (right_i <= read_length - read_off - seed_k_t); right_i++)
 				{
-#ifdef UNI_SEQ64
 					if(((buffer_seq[(kmer_pos_uni + seed_k_t - 1 + right_i) >> 5] >> ((31 - ((kmer_pos_uni + seed_k_t - 1 + right_i) & 0X1f)) << 1)) & 0X3)
 					        != ((read_bit[r_i][(read_off + seed_k_t - 1 + right_i) >> 5] >> ((31 - ((read_off + seed_k_t - 1 + right_i) & 0X1f)) << 1)) & 0X3)
 					        ) break;
-#else
-					if(((buffer_seq[(kmer_pos_uni + seed_k_t - 1 + right_i) >> 2] >> (((kmer_pos_uni + seed_k_t - 1 + right_i) & 0X3) << 1)) & 0X3)
-					        != ((read_bit[r_i][(read_off + seed_k_t - 1 + right_i) >> 5] >> ((31 - ((read_off + seed_k_t - 1 + right_i) & 0X1f)) << 1)) & 0X3)
-					        ) break;
-#endif
  				}
 
 				read_pos = read_off + 1 - left_i;
 				mem_length = seed_k_t + left_i + right_i - 2;
-				//rt_pos = read_off + seed_k_t + right_i - 2;
 
 				vertexm[tid][r_i][mem_i].uid = seed_id_r;
 				vertexm[tid][r_i][mem_i].seed_id = k_way;
@@ -480,8 +442,6 @@ int single_seed_reduction_core_single64(uint64_t (*read_bit)[((MAX_READLEN - 1) 
 			continue;
 		}
 		qsort(vertexm[tid][r_i], mem_i, sizeof(vertex_m), compare_uniid);
-		//fprintf(stderr, "----------------------after sort---------------\n");
-		//show_vertexm(vertexm[tid][r_i], mem_i);
 
 		uni_id_temp = vertexm[tid][r_i][0].uid;
 		j = 0;
@@ -505,7 +465,6 @@ int single_seed_reduction_core_single64(uint64_t (*read_bit)[((MAX_READLEN - 1) 
 					break;
 			}
 			e1 = j - 1;
-            // vertexu[r_i][su_i].id = su_i;
 			vertexu[tid][r_i][su_i].uid = vertexm[tid][r_i][s1].uid;
 			vertexu[tid][r_i][su_i].read_pos = vertexm[tid][r_i][s1].read_pos;
 			vertexu[tid][r_i][su_i].uni_pos_off = vertexm[tid][r_i][s1].uni_pos_off; //whether to set uni_pos_off to the leftest position
@@ -527,9 +486,6 @@ int single_seed_reduction_core_single64(uint64_t (*read_bit)[((MAX_READLEN - 1) 
 			++su_i;
 		}
 		memid[r_i] = su_i;
-		//fprintf(stderr, "----------------------------------after merge-------------------------\n");
-		//show_vertexu(vertexu[tid][r_i], su_i);
-		//fprintf(stderr,"-----------------------------------over----------------------------------\n");
 	}
 
     if ((memid[0] == 0) && (memid[1] == 0))
@@ -537,9 +493,7 @@ int single_seed_reduction_core_single64(uint64_t (*read_bit)[((MAX_READLEN - 1) 
 		dp_skeleton->multi_n = 0;
         return 1;
     }
-
-	//**********************
-    filter_bad_seed(vertexu[tid], memid, uniseed_length, tid);
+    expand_seed(vertexu[tid], memid, uniseed_length, tid);
 
     PATH_t* path1;
     PATH_t* path2;
@@ -569,25 +523,20 @@ int single_seed_reduction_core_single64(uint64_t (*read_bit)[((MAX_READLEN - 1) 
     {
     	dist_1 = 0;
     }
-    //fprintf(stderr, "dist_0 = %f, dist_1 = %f\n", dist_0, dist_1);
 #ifdef Annoation
     fprintf(stderr, "dist_0 = %f, dist_1 = %f\n", dist_0, dist_1);
 #endif
-    //here we can process multiple alignment, but now we didn't process it!!!!!!!!
 	float dist_tmp; 
     uint8_t temp_strand; //1 - 0 +  2 +/-(both)
 
-	int thre = min_chain_score; // thre is the minimal dp chaining score ca set as 40 **************************************
+	int thre = min_chain_score;
 	if (dist_0 >= dist_1 && dist_0 > thre)
 	{
-		dist_tmp = dist_0 * secondary_ratio;// (1-error_rate) 
+		dist_tmp = dist_0 * secondary_ratio;
 		if (dist_1 > dist_tmp)
 			temp_strand = 2;
 		else
 			temp_strand = 0;
-
-		// if (read_type == 3 || dist_0 > (float)(read_length * 0.2)) //1D read
-		// 	primary = 1;
 	}
 	else if(dist_0 < dist_1 && dist_1 > thre)
 	{
@@ -596,9 +545,6 @@ int single_seed_reduction_core_single64(uint64_t (*read_bit)[((MAX_READLEN - 1) 
 			temp_strand = 2;
 		else
 			temp_strand = 1;
-
-		// if (read_type == 3 || dist_1 > (float)(read_length * 0.2))
-		// 	primary = 1; 
 	}
 	else
 	{
@@ -767,7 +713,6 @@ static void get_skeleton_anchor_FW_RV(PATH_t *dist_path0, PATH_t *dist_path1, fl
 	TOP_N[0] = dist_max_index0;
 	uint32_t dist_min_index0 = find_min_index(dist_path0, dist_max_index0);
 
-    //fprintf(stderr, "dist_max0 = %f, dist_thre = %f, dist_min_index0 = %d\n", dist_max0, dist_thre, dist_min_index0);
 	top_0++;
 	for (i = num - 1; i >= 0; --i)
 	{
@@ -775,7 +720,6 @@ static void get_skeleton_anchor_FW_RV(PATH_t *dist_path0, PATH_t *dist_path1, fl
 		{
 			if ((top_0 < top_n) && (find_min_index(dist_path0, i) != dist_min_index0))
 			{
-				// fprintf(stderr, "top_0 = %d, head = %d, tail = %d, ture!\n", top_0, i, find_min_index(dist_path0, i));
 				TOP_N[top_0++] = i;
 			}
 			else if (top_0 >= top_n)
@@ -789,7 +733,6 @@ static void get_skeleton_anchor_FW_RV(PATH_t *dist_path0, PATH_t *dist_path1, fl
 	TOP_N[top++] = dist_max_index1;
 	uint32_t dist_min_index1 = find_min_index(dist_path1, dist_max_index1);
 
-    //fprintf(stderr, "dist_max1 = %f, dist_thre = %f, dist_min_index1 = %d\n", dist_max1, dist_thre, dist_min_index1);
 	top_1++;
 	for (i = num - 1; i >= 0; --i)
 	{
@@ -797,7 +740,6 @@ static void get_skeleton_anchor_FW_RV(PATH_t *dist_path0, PATH_t *dist_path1, fl
 		{
 			if ((top_1 < top_n) && (find_min_index(dist_path1, i) != dist_min_index1))
 			{
-				// fprintf(stderr, "top_1 = %d, head = %d, tail = %d, ture!\n", top_1, i, find_min_index(dist_path1, i));
 				top_1++;
 				TOP_N[top++] = i;
 			}
@@ -851,7 +793,6 @@ static void get_skeleton_anchor_FW_RV(PATH_t *dist_path0, PATH_t *dist_path1, fl
 			Anchor[real_multi_n].anchor_pos[j] = (uint32_t* )calloc(4, 4);
 		}
 
-		// fprintf(fp_tff, "%u\t%u\t", 0, cnt_back);
 		for (j = cnt_back - 1; j >=0; --j)
 		{
 			// fprintf(fp_tff, "%u\t%u\t%u\t%u\t", target[j].ts, target[j].te, query[j].qs, query[j].qe);
@@ -1001,18 +942,12 @@ static void get_skeleton_anchor(float dist_max, uint32_t dist_max_index, PATH_t 
 		}
 		for (j = cnt_back - 1; j >=0; --j)
 		{
-			// fprintf(fp_tff, "%u\t%u\t%u\t%u\t", target[j].ts, target[j].te, query[j].qs, query[j].qe);
 			Anchor[real_multi_n].anchor_pos[j][0] = target[j].ts;
 			Anchor[real_multi_n].anchor_pos[j][1] = target[j].te;
 			Anchor[real_multi_n].anchor_pos[j][2] = query[j].qs;
 			Anchor[real_multi_n].anchor_pos[j][3] = query[j].qe;
 		}
 		real_multi_n++;
-
-		// if(sig)
-		// {
-            
-		// }
 	}
 	dp_skeleton->multi_n = real_multi_n;
 	dp_skeleton->point = Anchor;
@@ -1046,7 +981,6 @@ int seeding_core(int read_seq_core, uint8_t tid, dpSkeleton_t *dp_skeleton)
 	}
 
 	read_length_a = read_length - 1;
-	// READLEN = read_length;// READLEN is a global variable, represent the length of query sequence
 	read_bit_char = (((uint16_t )((read_length_a >> 5) + 1)) << 3);
 
 	memset(read_bit1[tid][0], 0, read_bit_char);
@@ -1063,8 +997,6 @@ int seeding_core(int read_seq_core, uint8_t tid, dpSkeleton_t *dp_skeleton)
 		}
 		c_tmp = charToDna5n[(uint8_t)tmp_char];
 
-		//read_bit1[][2]是用来处理正反链的问题 c_tmp ^ 0X3  反向互不
-		//read_bit1 应该是采用了压缩的原理，并不是每个bp都单独存储
 		read_bit1[tid][0][r_i >> 5] |= (((uint64_t )c_tmp) << ((31 - (r_i & 0X1f)) << 1));
 		read_bit1[tid][1][(read_length_a - r_i) >> 5] |= (((uint64_t )(c_tmp ^ 0X3)) << ((31 - ((read_length_a - r_i) & 0X1f)) << 1));
 
@@ -1080,8 +1012,6 @@ static void *seeding_core_thread(void *aux)
 {
 	thread_aln_t *d = (thread_aln_t* )aux;
 	int _read_lines;
-
-	// fprintf(stderr, "I am thread %d\n", d->tid);
 
 	while(1)
 	{
@@ -1125,9 +1055,7 @@ static void print_sam_head(void)
 
 int load_fasta_1pass(bseq_file_t *bf)
 {
-	//int64_t kr2 = 1;
-	uint32_t read_in = batch_size;  //65535  batch, due to 3rd read are long than 2nd read, so the batch of read for each run should be fewer  65535/4095 = 16, 75*16 =  1200
-    fprintf(stderr, "batch_size = %d\n", batch_size);
+	uint32_t read_in = batch_size;
 	uint32_t seqii = read_in;
 	uint32_t r_i = 0;
 	uint32_t r_ii = 0;
@@ -1135,15 +1063,15 @@ int load_fasta_1pass(bseq_file_t *bf)
 	uint32_t primary;
 	//--------------------------------------------------------------	
 
-	k_r = seed_k_t - k_first_level;//k是一级列表即kmer的前k个bp，k_r是kmer的二级列表
-    re_b = 32 - seed_k_t; //10
+	k_r = seed_k_t - k_first_level;
+    re_b = 32 - seed_k_t;
     re_bt = (re_b << 1);
 	re_2bt = 64 - seed_k_t;
 
 	fp_sam = fopen(sam_path, "w");
 	if (fp_sam == NULL)
 	{
-		fprintf(stderr, "open file output.sam wrong!!!\n");
+		fprintf(stderr, "[Wrong] Failed to pen file %s!!!\n", sam_path);
 		exit(0);
 	}
 	print_sam_head();
@@ -1151,7 +1079,7 @@ int load_fasta_1pass(bseq_file_t *bf)
 	fp_tff = fopen(temp_anchor_dir, "w");
 	if (fp_tff == NULL)
 	{
-		fprintf(stderr, "open file all_anchor.tff wrong!!!\n");
+		fprintf(stderr, "[Wrong] Failed to open file %s!!!\n", temp_anchor_dir);
 		exit(0);
 	}
 
@@ -1222,23 +1150,17 @@ int load_fasta_1pass(bseq_file_t *bf)
 			uint32_t seqii_i;
 			for(seqii_i = 0; seqii_i < seqii; seqii_i++)
 			{
-				//if (seqii_i == TEMP_INDEX)
-				{
-					//fprintf(stderr, "read name = %s, qlen = %d\n", query_info[seqii_i].name, query_info[seqii_i].read_length);
-					seeding_core(seqii_i, 0, &dp_skeleton[seqii_i]);//2305
-				}
+				seeding_core(seqii_i, 0, &dp_skeleton[seqii_i]);
 			}
 		}
 		else
 		{
 			pthread_t* tid;
-			// thread_aln_t* aux;
 			pthread_attr_t attr;
 
 			pthread_attr_init(&attr);
 			pthread_attr_setdetachstate(&attr, PTHREAD_CREATE_JOINABLE);
 
-			// aux = (thread_aln_t* )calloc(thread_n, sizeof(thread_aln_t));
 			tid = (pthread_t* )calloc(thread_n, sizeof(pthread_t));
 
 			for(r_i = 0; r_i < thread_n; ++r_i)
@@ -1252,9 +1174,6 @@ int load_fasta_1pass(bseq_file_t *bf)
 				{
 					fprintf(stderr, "create pthread error");
 					exit(1);
-				}
-				else{
-					// printf("thread %d have create\n", r_i);
 				}
 			}
 
@@ -1275,10 +1194,7 @@ int load_fasta_1pass(bseq_file_t *bf)
 			fprintf(fp_tff, "%u\t", dp_skeleton[r_i].multi_n);
 			for(r_ii = 0; r_ii < dp_skeleton[r_i].multi_n; ++r_ii)
 			{
-				//primary = 1;
-                //
                 primary = dp_skeleton[r_i].point[r_ii].primary;
-				map2ref_cnt_primary += dp_skeleton[r_i].point[r_ii].anchor_n;
 
 				fprintf(fp_tff, "%u\t%u\t%u\t", dp_skeleton[r_i].point[r_ii].strand, primary, dp_skeleton[r_i].point[r_ii].anchor_n);
 
@@ -1286,7 +1202,6 @@ int load_fasta_1pass(bseq_file_t *bf)
 				{
 					//pos in reference
 					if (primary)
-					//if (dp_skeleton[r_i].point[r_ii].anchor_pos[r_iii][3] - dp_skeleton[r_i].point[r_ii].anchor_pos[r_iii][2] >= BASE_true)
 					{
 						anchor_map2ref[write_size].ts = dp_skeleton[r_i].point[r_ii].anchor_pos[r_iii][0];
 						anchor_map2ref[write_size].te = dp_skeleton[r_i].point[r_ii].anchor_pos[r_iii][1];
@@ -1298,7 +1213,6 @@ int load_fasta_1pass(bseq_file_t *bf)
 			fprintf(fp_tff, "\n");
 		}
 		//wirte position on reference genome to file for merging and filtering
-		// fprintf(stderr, "write_size = %d, map2ref_cnt = %d\n", write_size, cnt_tmp);
 		assert(write_size==cnt_tmp);
 		fwrite(anchor_map2ref, sizeof(TARGET_t), write_size, fp_temp);
 		//reset map2ref_cnt_arr
@@ -1339,8 +1253,6 @@ int load_fasta_1pass(bseq_file_t *bf)
 	free(aux);
     // free memory
 	if (map2ref_cnt_arr != NULL)	free(map2ref_cnt_arr);
-
-	fprintf(stderr, "primary = %d, secondary = %d\n", map2ref_cnt_primary, map2ref_cnt_secondary);
 
 	for (r_i = 0; r_i < thread_n; ++r_i)
 	{
@@ -1458,7 +1370,6 @@ static int aln_usage(void)
 	fprintf(stderr, "Output options\n\n");
 	fprintf(stderr, "    -N --top-num-aln      [INT]    Max allowed number of secondary alignment. [%u]\n", TOP_NUM_ALN);
 	fprintf(stderr, "    -Q --without-qual              Don't output base quality in SAM\n");
-	fprintf(stderr, "    -S --simulated                 run with simulated reads\n");
 	fprintf(stderr, "    -f --temp-file-perfix [STR]    Route of temporary files after the first-pass alignment. [%s]\n", TEMP_FILE_PERFIRX);
 	fprintf(stderr, "                                   If you run more than one tgs program in the same time, \n");
 	fprintf(stderr, "                                   you must point out different routes of temporary files for each program!!!\n");
@@ -1523,7 +1434,6 @@ int help_usage()
 	fprintf(stderr, "Output options\n\n");
 	fprintf(stderr, "    -N --top-num-aln      [INT]    Max allowed number of secondary alignment. [%u]\n", TOP_NUM_ALN);
 	fprintf(stderr, "    -Q --without-qual              Don't output base quality in SAM\n");
-	fprintf(stderr, "    -S --simulated                 run with simulated reads\n");
 	fprintf(stderr, "    -f --temp-file-perfix [STR]    Route of temporary files after the first-pass alignment. [%s]\n", TEMP_FILE_PERFIRX);
 	fprintf(stderr, "                                   If you run more than one tgs program in the same time, \n");
 	fprintf(stderr, "                                   you must point out different routes of temporary files for each program!!!\n");
@@ -1534,7 +1444,7 @@ int help_usage()
 	return 1;
 }
 
-static const char *short_option = "K:k:a:t:s:B:n:N:l:c:d:g:O:E:m:M:w:i:I:z:p:e:f:QSG:o:hT:x:";
+static const char *short_option = "K:k:a:t:s:B:n:N:l:c:d:g:O:E:m:M:w:i:I:z:p:e:f:QG:o:hx:";
 
 static struct option long_option[] = {
 	{"index-kmer", required_argument, NULL, 'K'},
@@ -1562,64 +1472,16 @@ static struct option long_option[] = {
 	{"e-shift", required_argument, NULL, 'e'},
 	{"temp-file-perfix", required_argument, NULL, 'f'},
 	{"without-qual", no_argument, NULL, 'Q'},
-	{"simulated", no_argument, NULL, 'S'},
     {"gtf", required_argument, NULL, 'G'},
 	{"output", required_argument, NULL, 'o'},
 	{"help", no_argument, NULL, 'h'},
-    {"TEMP-INDEX", required_argument, NULL, 'T'},
 	{"read-type", required_argument, NULL, 'x'},
 	{0,0,0,0}
 };
 
-void print (param_map *opt)
-{
-	printf("k_t = %u\n", k_t);
-	printf("seed_k_t = %u\n", seed_k_t);
-	printf("hash_kmer = %u\n", opt->hash_kmer);
-	printf("thread = %u\n", thread_n);
-	printf("seed_step = %u\n", seed_step);
-	printf("pos_n_max = %u\n", pos_n_max);
-	printf("readlen_max = %u\n", readlen_max);
-	printf("max_exon_per_read = %u\n", max_exon_num_per_read);
-	printf("Eindel = %u\n", Eindel);
-	printf("min_chain_score = %u\n", min_chain_score);
-	printf("max_intron_length = %u\n", max_intron_length);
-	printf("zdrop_D = %u, zdrop_R = %u\n", opt->zdrop_D, opt->zdrop_R);
-	printf("gap_open_D = %u, gap_open2_D = %u, gap_ext_D = %u, gap_ext2_D = %u\n", opt->gap_open_D, opt->gap_open2_D, opt->gap_ex_D, opt->gap_ex2_D);
-	printf("gap_open_R = %u, gap_open2_R = %u, gap_ext_R = %u, gap_ext2_R = %u\n", opt->gap_open_R, opt->gap_open2_R, opt->gap_ex_R, opt->gap_ex2_R);
-}
-
-
-void print_ref()
-{
-    uint32_t i;
-    uint32_t start, end;
-    int chr_n = find_chr_n_by_name("chr3");
-    printf("chr_n = %d\n", chr_n);
-    //start = 149649840 + chr_end_n[chr_n - 1] - 1;
-    //end = 149650184 + chr_end_n[chr_n - 1] - 1;
-    //printf("start = %u, end = %u\n", start, end);
-    int t;
-    //for (i = end ; i >= start; --i)
-    //{
-    //    t = (buffer_ref_seq[i >> 5] >> ((31 - (i & 0X1f)) << 1)) & 0X3;
-    //    fprintf(stderr, "%c", "ACGT"[3 - t]);
-    //}
-    //fprintf(stderr, "\n");
-
-    start = 149648997 + chr_end_n[chr_n - 1] - 1;
-    end = 149649102 + chr_end_n[chr_n - 1] - 1;
-    printf("start = %u, end = %u\n", start, end);
-    for (i = end ; i >= start; --i)
-    {
-        t = (buffer_ref_seq[i >> 5] >> ((31 - (i & 0X1f)) << 1)) & 0X3;
-        fprintf(stderr, "%c", "ACGT"[3 - t]);
-    }
-    fprintf(stderr, "\n");
-}
-
 int desalt_aln(int argc, char *argv[], const char *version)
 { 
+	fprintf(stderr, "[Main] deSALT - De Bruijn graph-based Spliced Aligner for Long Transcriptome reads\n");
 	param_map *opt = (param_map* )calloc(1, sizeof(param_map));
 	init_map_param(opt);
 	int c;
@@ -1627,8 +1489,6 @@ int desalt_aln(int argc, char *argv[], const char *version)
 
     sprintf(command, "@PG\tID:deSALT\tPN:deSALT\tVN:%s\tCL:%s", version, argv[0]);
     for (c = 1; c < argc; ++c) sprintf(command+strlen(command), " %s", argv[c]);
-
-    TEMP_INDEX = 2;
 
 	while((c = getopt_long(argc, argv, short_option, long_option, NULL)) != -1)
 	{
@@ -1662,11 +1522,9 @@ int desalt_aln(int argc, char *argv[], const char *version)
 			case 'e': opt->e_shift = atoi(optarg); break;
 			case 'f': opt->temp_file_perfix = strdup(optarg); break;
 			case 'Q': opt->with_qual = 0; break;
-			case 'S': opt->simulated = 1; break;
             case 'G': opt->gtf_path = strdup(optarg); opt->with_gtf = 1; break;
 			case 'o': opt->sam_path = strdup(optarg); break;
 			case 'h': return aln_usage(); break;
-            case 'T': TEMP_INDEX = atoi(optarg); break;
 			case 'x': if (strcmp(optarg, "ccs") == 0) opt->read_type = 1;
 					  else if (strcmp(optarg, "clr") == 0) opt->read_type = 2;
 					  else if (strcmp(optarg, "ont1d") == 0) opt->read_type = 3;
@@ -1682,9 +1540,9 @@ int desalt_aln(int argc, char *argv[], const char *version)
 
 	if (argc - optind < 3)
 		return aln_usage();
-    if ((opt->seed_k_t < 11) || (opt->seed_k_t > 22))
+    if ((opt->seed_k_t < 13) || (opt->seed_k_t > 22))
     {
-        fprintf(stderr, "Input error: -k cannot be less than 13 or more than 21\n");
+        fprintf(stderr, "Input error: -k cannot be less than 13 or more than 22\n");
         exit(1);
     }
     if ((opt->thread_n < 1) || (opt->thread_n > 48))
@@ -1692,19 +1550,19 @@ int desalt_aln(int argc, char *argv[], const char *version)
         fprintf(stderr, "Input error: -t cannot be less than 1 or more than 32\n");
         exit(1);
     }
-    if ((opt->hash_kmer < 4) || (opt->hash_kmer > 12))
+    if ((opt->hash_kmer < 6) || (opt->hash_kmer > 10))
     {
-        fprintf(stderr, "Input error: -a cannot be less than 4 or more than 12\n");
+        fprintf(stderr, "Input error: -a cannot be less than 6 or more than 10\n");
         exit(1);
     }
     if ((opt->seed_step < 1) || (opt->seed_step > 10))
     {
-        fprintf(stderr, "Input error: -s cannot be less than 2 or more than 10\n");
+        fprintf(stderr, "Input error: -s cannot be less than 1 or more than 10\n");
         exit(1);
     }
-    if ((opt->pos_n_max < 20) || (opt->pos_n_max > 5000))
+    if ((opt->pos_n_max < 30) || (opt->pos_n_max > 5000))
     {
-        fprintf(stderr, "Input error: -n cannot be less than 20 or more than 500\n");
+        fprintf(stderr, "Input error: -n cannot be less than 30 or more than 5000\n");
         exit(1);
     }
     if ((opt->top_n < 1) || (opt->top_n > 10))
@@ -1717,20 +1575,20 @@ int desalt_aln(int argc, char *argv[], const char *version)
         fprintf(stderr, "Input error: -i cannot be less than 15 or more than 30\n");
         exit(1);
     }
-    if ((opt->secondary_ratio < 0.5) || (opt->secondary_ratio >= 1.0))
+    if ((opt->secondary_ratio < 0.7) || (opt->secondary_ratio >= 1.0))
     {
-        fprintf(stderr, "Input error: -p cannot be less than 0.5 or more than 1.0\n");
+        fprintf(stderr, "Input error: -p cannot be less than 0.7 or more than 1.0\n");
         exit(1);
     }
-	if ((opt->e_shift > 15) || (opt->e_shift < 1))
+	if ((opt->e_shift > 10) || (opt->e_shift < 2))
 	{
-		fprintf(stderr, "Input error: -e cannot be less than 1 or more than 15\n");
+		fprintf(stderr, "Input error: -e cannot be less than 2 or more than 10\n");
         exit(1);
 	}
 
-
     if (opt->with_gtf)
     {
+		fprintf(stderr, "[Param-INFO] deSALT parameters: seed-kmer:%d\thash-kmer:%d\tthread:%d\twith GTF\n", opt->seed_k_t, opt->hash_kmer, opt->thread_n);
         //get the folder of deSALT
         char dir[1024];
         char desalt_dir[1024];
@@ -1751,10 +1609,14 @@ int desalt_aln(int argc, char *argv[], const char *version)
 
         if ((access(path_anno_load, F_OK)) == -1)
         {    
-            fprintf(stderr, "[Wrong!]: %s is not exist, please check!\n", path_anno_load);
+            fprintf(stderr, "[Wrong]: %s is not exist, please check!\n", path_anno_load);
             exit(1);
         }
-    }
+    }else
+	{
+		fprintf(stderr, "[Param-INFO] deSALT parameters: seed-kmer:%d\thash-kmer:%d\tthread:%d\n", opt->seed_k_t, opt->hash_kmer, opt->thread_n);
+	}
+	
 
 	char *index_dir;
 	char *read_fastq;
@@ -1806,20 +1668,16 @@ int desalt_aln(int argc, char *argv[], const char *version)
 	// opt->max_sw_mat = opt->max_read_join_gap * opt->max_intron_length;
 	min_chain_score = opt->min_chain_score;
 	seed_offset = k_t - seed_k_t;
-    seed_num = ((readlen_max - seed_k_t) / seed_step) + 1;
+    // seed_num = ((readlen_max - seed_k_t) / seed_step) + 1;
     
-    seed_num = 10000; // for test
-    uni_pos_n_max = pow(2, seed_offset - 1); //may be more smaller, can use different value to test time
+    seed_num = 10000; // extract at moset 10000 seed every read
+    uni_pos_n_max = pow(2, seed_offset - 1); //may be more smaller
+    // uni_pos_n_max = 64;
     new_seed_cnt = seed_num * (uni_pos_n_max + 1);
-    uni_pos_n_max = 64;
-    //uni_pos_n_max = pow(4, seed_offset);
 
 	//waitlength
 	float els = 0.05;
 	float error = 0.2;
-
-	//test*******
-	// read_type = 3;
 
 	if (read_type == 1) //ccs
 		error = 0.02;
@@ -1834,36 +1692,23 @@ int desalt_aln(int argc, char *argv[], const char *version)
 	waitingLen = (int)(t * q);
 	BASE_true = seed_k_t + 1/error;
 
-    //waitingLen = 70;
-    //BASE_true = k_t;
-
-
-    printf("waitlen = %d, BASE_true = %d, simulated = %d, max_sw_mat = %lld\n", waitingLen, BASE_true, opt->simulated, opt->max_sw_mat);
-
-
-	fprintf(stderr, "[INFO] Alignment Tool for Long RNA Reads Mapping\n");
     bseq_file_t *bf;
     bf = bseq_open(read_fastq);
     if(bf == 0)
     {
-        fprintf(stderr, "wrong input file route or name: %s \n", read_fastq);
+        fprintf(stderr, "[Waring] Wrong input file route or name: %s \n", read_fastq);
         exit(1);
     }
-	//******************************************************
-	fprintf(stderr, "[INFO] Loading Index and Reads\n");
+
+	fprintf(stderr, "[Phase-INFO] Loading Index and Reads\n");
 	init_memory(opt, index_dir);
-	//********************************************************
-	fprintf(stderr, "[INFO] Seeding and Chaining Phase\n");
 
-
-    //print_ref();
-
+	fprintf(stderr, "[Phase-INFO] Seeding and Chaining Phase (first-pass)\n");
     double tt1 = clock();
 	load_fasta_1pass(bf);
-    fprintf(stderr, "1pass time = %f\n", (double)(clock() - tt1)/CLOCKS_PER_SEC);
+    fprintf(stderr, "[Phase-INFO] Total %d reads were processed in %f seconds (first-pass)\n", TOTAL_READ_COUNTs, (double)(clock() - tt1)/CLOCKS_PER_SEC);
     
     //reset batch size for accerlation of 2pass alignment
-    fprintf(stderr, "TOTAL_READ_COUNTS = %d\n", TOTAL_READ_COUNTs);
     if (TOTAL_READ_COUNTs < opt->batch_size)
     {
         opt->batch_size = TOTAL_READ_COUNTs / 2 + 1; 
@@ -1872,20 +1717,19 @@ int desalt_aln(int argc, char *argv[], const char *version)
     {
         opt->batch_size = TOTAL_READ_COUNTs / 5;
     }
-    fprintf(stderr, "batch_size = %d\n", opt->batch_size);
 
-	double t_close = clock();
+	/*
+	free memory of first-pass
+	*/
 	del_deBGAmemory();
 	delGraph();
 	bseq_close(bf);
-	fprintf(stderr, "free time = %f\n", (double)(clock() - t_close)/CLOCKS_PER_SEC);
 
-	fprintf(stderr, "[INFO] Primary exon region count: %d\n", map2ref_cnt);
-	fprintf(stderr, "[INFO] Alignment Phase\n");
+	fprintf(stderr, "[Phase-INFO] Refined Alignment Phase (second-pass)\n");
+	int Total_mapped_reads = 0;
     double tt2 = clock();
-    
-    load_fasta_2pass(map2ref_cnt, opt, read_fastq);
-    fprintf(stderr, "2pass time = %f\n", (double)(clock() - tt2)/CLOCKS_PER_SEC);
+    load_fasta_2pass(map2ref_cnt, opt, read_fastq, &Total_mapped_reads);
+    fprintf(stderr, "[Phase-INFO] Total %d reads were mapped to genome in %f seconds (second-pass)\n", Total_mapped_reads, (double)(clock() - tt2)/CLOCKS_PER_SEC);
 
 	del_finalmemory();
 	char cmd[2048];
@@ -1893,7 +1737,7 @@ int desalt_aln(int argc, char *argv[], const char *version)
 	system(cmd);
 	free(opt);
 
-	fprintf(stderr, "[INFO] Finishing Alignment\n");
+	fprintf(stderr, "[Phase-INFO] Finishing Alignment\n");
 
 	return 0;
 }

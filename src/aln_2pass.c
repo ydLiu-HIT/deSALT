@@ -2,7 +2,6 @@
 	> File Name: aln_2pass.c
 	> Author: 
 	> Mail: 
-	> Created Time: 2018年01月20日 星期六 15时33分50秒
  ************************************************************************/
 
 #include <stdio.h>
@@ -13,31 +12,18 @@
 #include <string.h>
 #include <pthread.h>
 
-// #include "read_seeding.h"
 #include "binarys_qsort.h"
 #include "bseq.h"
 #include "aln_2pass.h"
 #include "splic_junction.h"
 #include "load_unipath_size.h"
 #include "bit_operation.h"
-// #include "ksw2.h"
 #include "hash_index.h"
 #include "format.h"
 
-// #define PRINT_SPLICE
-// #define DEBUG
-// #define PRINT
-//#define PRINT_ANCHOR
-//
 int THREAD_READ_I;
 pthread_rwlock_t RWLOCK;
-double binary_search_time = 0;
-double *search_time = NULL;
-double total_hash_time = 0;
-double *hash_time = NULL;
 
-
-//static int find_chr_n_by_name(char *chr_name)
 int find_chr_n_by_name(char *chr_name)
 {
 	int i;
@@ -51,7 +37,6 @@ int find_chr_n_by_name(char *chr_name)
 
 void get_refseq(uint8_t *ref, uint32_t len, uint32_t start)
 {
-    //check 
 	uint32_t m;
 
     for (m = 0; m < len; ++m) 
@@ -112,85 +97,6 @@ static int have_overlap(uint32_t anchor_s, uint32_t anchor_e, uint32_t anno_s, u
 	return 1;
 }
 
-//static int32_t find_optimal_match(Anno_t *annotations, uint32_t upper, uint32_t down, uint32_t ts, uint32_t te, int *as_range)
-//{
-//	uint32_t j;
-//	int32_t max_id = 0;
-//	int overlap_num = 0;
-//	int overlap_num_max = 0;
-//	float overlap_ratio = 0.0;
-//	float overlap_ratio_max = 0.0;
-//	int8_t overlap = 0;
-//	for (j = upper; j <= down; ++j)
-//	{
-//		cal_overlap(ts, te, annotations[j].start, annotations[j].end, &overlap_num, &overlap_ratio);
-//		if (overlap_num == 0)
-//		{	
-//			continue;
-//		}
-//
-//		overlap = 1;
-//		if (overlap_num > overlap_num_max && overlap_ratio > overlap_ratio_max)
-//		{
-//			overlap_num_max = overlap_num;
-//			overlap_ratio_max = overlap_ratio;
-//			max_id = j;
-//		}
-//		else if (overlap_num <= overlap_num_max && overlap_ratio > overlap_ratio_max)
-//		{
-//			if (overlap_num == overlap_num_max)
-//			{
-//				overlap_num_max = overlap_num;
-//				overlap_ratio_max = overlap_ratio;
-//				max_id = j;
-//			}
-//			else
-//			{
-//				int left1 = abs(annotations[max_id].start - ts);
-//				int left2 = abs(annotations[j].start - ts);
-//				int right1 = abs(te - annotations[max_id].end);
-//				int right2 = abs(te - annotations[j].end);
-//				if ((right2 + left2) < (left1 + right1))
-//				{
-//					overlap_num_max = overlap_num;
-//					overlap_ratio_max = overlap_ratio;
-//					max_id = j;
-//				}
-//			}
-//		}
-//		else if (overlap_num > overlap_num_max && overlap_ratio <= overlap_ratio_max)
-//		{
-//			if (overlap_ratio == overlap_ratio_max)
-//			{
-//				overlap_num_max = overlap_num;
-//				overlap_ratio_max = overlap_ratio;
-//				max_id = j;
-//			}
-//			else
-//			{
-//				int left1 = abs(annotations[max_id].start - ts);
-//				int left2 = abs(annotations[j].start - ts);
-//				int right1 = abs(te - annotations[max_id].end);
-//				int right2 = abs(te - annotations[j].end);
-//				if ((right2 + left2) < (left1 + right1))
-//				{
-//					overlap_num_max = overlap_num;
-//					overlap_ratio_max = overlap_ratio;
-//					max_id = j;
-//				}
-//			}
-//		}
-//	}
-//
-//	if (overlap_num_max < 3*(te - ts)/4)
-//		*as_range = 1;
-//
-//	if (overlap)
-//		return max_id;
-//	else
-//		return -1;
-//}
-//
 static int find_exact_match(Anno_t *annotations, uint32_t upper, uint32_t down, uint32_t ts, uint32_t te)
 {
 	int j;
@@ -223,20 +129,13 @@ static int load_anchor_with_gtf(TARGET_t *anchor_map2ref, Anno_t *annotations, u
 
 	FILE* fp_temp = fopen(temp_binary_pos, "rb");
 
-	//read anchor info from fp_temp
 	rewind(fp_temp);
 	fread(anchor_map2ref, sizeof(TARGET_t), map2ref_cnt, fp_temp);
     fclose(fp_temp);
 
 	//sort anchor_map2ref according ts
 	qsort(anchor_map2ref, map2ref_cnt, sizeof(TARGET_t), compare_anchor);
-#ifdef PRINT_ANCHOR
-	fprintf(stderr, "iniital, before merge-----------------------\n");
-	for (i = 0; i < map2ref_cnt; ++i)
-	{
-		fprintf(stderr, "%u-%u\n", anchor_map2ref[i].ts, anchor_map2ref[i].te);
-	}
-#endif
+
 	int merge_cnt = 0;
 	uint32_t ts;
 	uint32_t te;
@@ -322,13 +221,6 @@ static int load_anchor_with_gtf(TARGET_t *anchor_map2ref, Anno_t *annotations, u
 	anchor_map2ref[merge_cnt].strand = 3;
 	merge_cnt++;
 
-#ifdef PRINT_ANCHOR
-	fprintf(stderr, "after merge, before compare--------------------merge_cnt = %d, total_items = %d\n", merge_cnt, total_items);
-	for (i = 0; i < merge_cnt; ++i)
-	{
-		fprintf(stderr, "%u-%u-%u\n", anchor_map2ref[i].ts, anchor_map2ref[i].te, anchor_map2ref[i].cov);
-	}
-#endif
 	//find corresponding item in annotation by order loop
 	uint32_t final_merge_cnt = 0;
     int non_exon_region_but_good = 0;
@@ -348,7 +240,6 @@ static int load_anchor_with_gtf(TARGET_t *anchor_map2ref, Anno_t *annotations, u
 		{
 			start_idx++;
 		}
-		//if (have_overlap(anchor_map2ref[i].ts, anchor_map2ref[i].te, anno_range[start_idx].start, anno_range[start_idx].end))
         cal_overlap(anchor_map2ref[i].ts, anchor_map2ref[i].te, anno_range[start_idx].start, anno_range[start_idx].end, &overlap_num);
         if (overlap_num > 0)
 		{
@@ -367,19 +258,10 @@ static int load_anchor_with_gtf(TARGET_t *anchor_map2ref, Anno_t *annotations, u
                     max_overlap_num = overlap_num;
                     max_overlap_id = j;
                 }
-				//if (!have_overlap(anchor_map2ref[i].ts, anchor_map2ref[i].te, anno_range[j].start, anno_range[j].end))
-				//	break;
 			}
 			//query correspond items from each range trunck
 			int r_max;
             r_max = find_exact_match(annotations, anno_range[max_overlap_id].upper, anno_range[max_overlap_id].down, anchor_map2ref[i].ts, anchor_map2ref[i].te);
-
-			//for(m = start_idx; m < j; m++)
-			//{
-			//	r_max = find_exact_match(annotations, anno_range[m].upper, anno_range[m].down, anchor_map2ref[i].ts, anchor_map2ref[i].te);
-			//	if (r_max >= 0)
-			//		break;
-			//}
 
 			if (r_max >= 0)
 			{
@@ -414,7 +296,7 @@ static int load_anchor_with_gtf(TARGET_t *anchor_map2ref, Anno_t *annotations, u
 				anchor_map2ref[final_merge_cnt].ts = anchor_map2ref[i].ts;
 				anchor_map2ref[final_merge_cnt].te = anchor_map2ref[i].te;
 				anchor_map2ref[final_merge_cnt].cov = anchor_map2ref[i].cov;
-				anchor_map2ref[final_merge_cnt].strand = 3; //  later will process strand == 3
+				anchor_map2ref[final_merge_cnt].strand = 3; //
 				final_merge_cnt ++;
                 non_exon_region_but_good += 1;
 			}
@@ -425,12 +307,6 @@ static int load_anchor_with_gtf(TARGET_t *anchor_map2ref, Anno_t *annotations, u
 			j = start_idx;
 		}
 	}
-	
-	// fprintf(stderr, "before re-merge---------\n");
-	// for (i = 0; i < final_merge_cnt; ++i)
-	// {
-	// 	fprintf(stderr, "%u-%u-%u-%u\n", anchor_map2ref[i].ts, anchor_map2ref[i].te, anchor_map2ref[i].strand, anchor_map2ref[i].cov);
-	// }
 
     //re-merge the anchor_map2ref
 	qsort(anchor_map2ref, final_merge_cnt, sizeof(TARGET_t), compare_anchor);
@@ -443,7 +319,6 @@ static int load_anchor_with_gtf(TARGET_t *anchor_map2ref, Anno_t *annotations, u
     int change = 0;
     for (i = 1; i < m; ++i)
     {
-		//if (anchor_map2ref[i].ts <= te + 20 && anchor_map2ref[i].strand == strand)
         if (anchor_map2ref[i].ts <= te + 20)
 		{
 			ts = (ts < anchor_map2ref[i].ts)? ts : anchor_map2ref[i].ts;
@@ -472,14 +347,6 @@ static int load_anchor_with_gtf(TARGET_t *anchor_map2ref, Anno_t *annotations, u
     anchor_map2ref[final_merge_cnt].strand = strand;
     final_merge_cnt++;
 
-	fprintf(stderr, "after compare--------------------merge_cnt = %d, final_merge1 = %d, final_merge2 = %d, non_exon_region_but_good = %d, exon_region_but_not_complete = %d, wrong_filter = %d, wrong_filter2 = %d, change = %d\n", merge_cnt, m, final_merge_cnt, non_exon_region_but_good, exon_region_but_not_complete, wrong_filter1, wrong_filter2, change);
-#ifdef PRINT_ANCHOR
-	for (i = 0; i < final_merge_cnt; ++i)
-	{
-		fprintf(stderr, "%u-%u-%u-%u\n", anchor_map2ref[i].ts, anchor_map2ref[i].te, anchor_map2ref[i].strand, anchor_map2ref[i].cov);
-	}
-#endif
-
 	return final_merge_cnt;
 }
 
@@ -488,7 +355,7 @@ static uint32_t get_annotations(param_map *opt, TARGET_t *anchor_map2ref, uint32
 	//temp annotation out file
 	char annotation_dir[1024] = "./anno.txt";
 	/*
-	exec python script for annotation reading
+	exec python script for annotation loading
 	*/
 	FILE *f;
 	char s[1024];
@@ -506,7 +373,7 @@ static uint32_t get_annotations(param_map *opt, TARGET_t *anchor_map2ref, uint32
 
 	if (fp_anno == NULL)
 	{
-		fprintf(stderr, "[Wrong!!!] open pre-processed annotation file %s wrong.\n", annotation_dir);
+		fprintf(stderr, "[Wrong!!!] Open pre-processed annotation file %s wrong.\n", annotation_dir);
 		exit(0);
 	}
 
@@ -514,7 +381,6 @@ static uint32_t get_annotations(param_map *opt, TARGET_t *anchor_map2ref, uint32
 	uint32_t i;
 	fscanf(fp_anno, "%u\n", &total_items);
 
-	fprintf(stderr, "total_item = %d\n", total_items);
 	Anno_t *annotation = (Anno_t *)calloc(total_items * 2, sizeof(Anno_t));
     char CHR[1024];
 	int chr_n;
@@ -528,14 +394,6 @@ static uint32_t get_annotations(param_map *opt, TARGET_t *anchor_map2ref, uint32
 	}
 
 	qsort(annotation, total_items, sizeof(Anno_t), compare_exon);
-
-#ifdef PRINT_ANCHOR
-    fprintf(stderr, "here1\n");
-	for (i = 0; i < total_items; ++i)
-	{
-		fprintf(stderr, "%u\t%u\t%u\n", annotation[i].strand, annotation[i].start, annotation[i].end);
-	}
-#endif
 
     //merge overlapped exon which two boundary both different as new exon
     uint32_t ts = annotation[0].start;
@@ -574,18 +432,8 @@ static uint32_t get_annotations(param_map *opt, TARGET_t *anchor_map2ref, uint32
         i = j + 1;
     }
 
-    fprintf(stderr, "total_items = %d, total_items_new = %d\n", total_items, total_items_new);
     total_items = total_items_new;
     qsort(annotation, total_items, sizeof(Anno_t), compare_exon);
-
-	//print all the exons in annotations
-#ifdef PRINT_ANCHOR
-    fprintf(stderr, "here2\n");
-	for (i = 0; i < total_items; ++i)
-	{
-		fprintf(stderr, "%u\t%u\t%u\n", annotation[i].strand, annotation[i].start, annotation[i].end);
-	}
-#endif
 	fclose(fp_anno);
 
 	//get trunk of annotations
@@ -619,18 +467,6 @@ static uint32_t get_annotations(param_map *opt, TARGET_t *anchor_map2ref, uint32
 	anno_range[total_range].down = i - 1;
 	total_range++;
 
-#ifdef PRINT_ANCHOR
-	fprintf(stderr, "annotation range-----\n");
-	int j;
-	for (i = 0; i < total_range; ++i)
-	{
-		fprintf(stderr, "%u\t%u\t%u\t%u\n", anno_range[i].start, anno_range[i].end, anno_range[i].upper, anno_range[i].down);
-		for (j = anno_range[i].upper; j <= anno_range[i].down; ++j)
-		{
-			fprintf(stderr, "part: %u-%u-%u\n", annotation[j].start, annotation[j].end, annotation[j].strand);
-		}
-	}
-#endif
 
 	//load anchor an compare to annotation
 	uint32_t final_merge_cnt = load_anchor_with_gtf(anchor_map2ref, annotation, map2ref_cnt, total_items, anno_range, total_range);
@@ -644,8 +480,6 @@ static uint32_t get_annotations(param_map *opt, TARGET_t *anchor_map2ref, uint32
 static int load_anchor(TARGET_t *anchor_map2ref, uint32_t map2ref_cnt)
 {
 	uint32_t i, m;
-
-    fprintf(stderr, "file = %s\n", temp_binary_pos);
 	FILE* fp_temp = fopen(temp_binary_pos, "rb");
 
 	//read anchor info from fp_temp
@@ -654,13 +488,7 @@ static int load_anchor(TARGET_t *anchor_map2ref, uint32_t map2ref_cnt)
 
 	//sort anchor_map2ref according ts
 	qsort(anchor_map2ref, map2ref_cnt, sizeof(TARGET_t), compare_anchor);
-#ifdef PRINT_ANCHOR
-	fprintf(stderr, "before merge-----------------------\n");
-	for (i = 0; i < map2ref_cnt; ++i)
-	{
-		fprintf(stderr, "%u-%u\n", anchor_map2ref[i].ts, anchor_map2ref[i].te);
-	}
-#endif
+
 	int merge_cnt = 0;
 	uint32_t ts;
 	uint32_t te;
@@ -671,7 +499,6 @@ static int load_anchor(TARGET_t *anchor_map2ref, uint32_t map2ref_cnt)
 	ts = anchor_map2ref[0].ts;
 	te = anchor_map2ref[0].te;
 	i = 1;
-	// for (i = 1; i < map2ref_cnt; ++i)
 	while (i < map2ref_cnt)
 	{
 		if (anchor_map2ref[i].te <= te) //contained
@@ -680,7 +507,6 @@ static int load_anchor(TARGET_t *anchor_map2ref, uint32_t map2ref_cnt)
 			i++;
 			continue;
 		}
-		//else if(anchor_map2ref[i].ts <= te) //merge, if two anchor less than 10bp, we think the two anchor belone to the same anchor ......................
         else if (anchor_map2ref[i].ts < te + max_dis_connect)
 		{
 			te = anchor_map2ref[i].te;
@@ -689,7 +515,6 @@ static int load_anchor(TARGET_t *anchor_map2ref, uint32_t map2ref_cnt)
 		}
 		else
 		{	
-			// if(!((coverage == 1) && (te - ts < BASE_true)) || ((merge_cnt > 0) && (anchor_map2ref[i].ts - anchor_map2ref[merge_cnt - 1].te > max_intron_length))) //filter anchor with low coverage
 			if (coverage > 1 || (te - ts > filter))
 			{
 				anchor_map2ref[merge_cnt].ts = ts;
@@ -745,19 +570,6 @@ static int load_anchor(TARGET_t *anchor_map2ref, uint32_t map2ref_cnt)
 	//anchor_map2ref[merge_cnt].strand = 3;
 	//merge_cnt++;
 	
-
-#ifdef PRINT_ANCHOR
-    uint32_t chr_begin = 0;
-    int chr_n = 0;
-	fprintf(stderr, "after merge-------------------merge_cnt = %d\n", merge_cnt);
-	for (i = 0; i < merge_cnt; ++i)
-	{
-
-	    chr_n = chromosome_judge(anchor_map2ref[i].ts, &chr_begin);
-		fprintf(stderr, "%s-%u-%u-%u-%u-%u\n", chr_names[chr_n], anchor_map2ref[i].ts - chr_begin, anchor_map2ref[i].te - chr_begin,  anchor_map2ref[i].ts,  anchor_map2ref[i].te, anchor_map2ref[i].cov);
-	}
-#endif
-	// fprintf(stderr, "merge_cnt = %u\n", merge_cnt);
 	fclose(fp_temp);
 
 	return merge_cnt;
@@ -823,7 +635,7 @@ static inline int binarysearch_anchor(TARGET_t *anchor_map2ref, int s1, int s2, 
 	return -1;
 }
 
-void mm_fix_cigar(_aln_t *aln, const uint8_t *qseq, const uint8_t *tseq, uint32_t qlen, uint32_t tlen, int *qshift, int *tshift, uint32_t *qs, uint32_t *ts, char *seqname)
+void fix_cigar(_aln_t *aln, const uint8_t *qseq, const uint8_t *tseq, uint32_t qlen, uint32_t tlen, int *qshift, int *tshift, uint32_t *qs, uint32_t *ts)
 {
 	int32_t k, toff = 0, qoff = 0, to_shrink = 0;
 	*qshift = *tshift = 0;
@@ -855,12 +667,7 @@ void mm_fix_cigar(_aln_t *aln, const uint8_t *qseq, const uint8_t *tseq, uint32_
 			toff += len;
 		}
 	}
-#ifdef PRINT
-    fprintf(stderr, "qoff = %d, qlen = %d, toff = %d, tlen = %d\n", qoff, qlen, toff, tlen);
-#endif
 
-    if (qoff != qlen || toff != tlen)
-        fprintf(stderr, "worng seqname %s\n", seqname);
     //later give up assert function, memory consumption
 	assert(qoff == qlen && toff == tlen);
 	if (to_shrink) { // squeeze out zero-length operations
@@ -886,7 +693,7 @@ void mm_fix_cigar(_aln_t *aln, const uint8_t *qseq, const uint8_t *tseq, uint32_
 		memmove(aln->cigar, aln->cigar + 1, aln->n_cigar * 4);
 	}
 }
-void mm_update_extra(_aln_t *aln, uint8_t *qseq, uint8_t *tseq, uint32_t qlen, uint32_t tlen, uint32_t *qs, uint32_t *ts, uint8_t q, uint8_t e, char* seqname)
+void mm_update_extra(_aln_t *aln, uint8_t *qseq, uint8_t *tseq, uint32_t qlen, uint32_t tlen, uint32_t *qs, uint32_t *ts, uint8_t q, uint8_t e)
 {
     uint32_t k, l, toff = 0, qoff = 0;
 	int32_t s = 0, max = 0;
@@ -894,7 +701,7 @@ void mm_update_extra(_aln_t *aln, uint8_t *qseq, uint8_t *tseq, uint32_t qlen, u
 	if (aln->n_cigar == 0) return;
 
 	int32_t qshift, tshift;
-	mm_fix_cigar(aln, qseq, tseq, qlen, tlen, &qshift, &tshift, qs, ts, seqname);
+	fix_cigar(aln, qseq, tseq, qlen, tlen, &qshift, &tshift, qs, ts);
 	qlen -= qshift; // qseq and tseq may be shifted due to the removal of leading I/D
 	tlen -= tshift;
 	qseq += qshift;
@@ -943,11 +750,6 @@ void mm_update_extra(_aln_t *aln, uint8_t *qseq, uint8_t *tseq, uint32_t qlen, u
         }
     }
 	aln->dp_max = max;
-#ifdef PRINT
-    fprintf(stderr, "qoff = %d, qlen = %d, toff = %d, tlen = %d\n", qoff, qlen, toff, tlen);
-#endif
-    if (qoff != qlen || toff != tlen)
-        fprintf(stderr, "worng seqname1 %s\n", seqname);
     assert(qoff == qlen && toff == tlen);
 }
 
@@ -1038,19 +840,6 @@ uint32_t append_intron_to_cigar(void *km, ksw_extz_t *ez, uint32_t pre_pos, uint
 	return cigar_lt + pre_pos;
 }
 
-
-static uint32_t join_cigar(ksw_extz_t *ez, uint32_t *cigar, uint32_t pre_pos)
-{
-	uint32_t i;
-	uint32_t len = pre_pos;
-	for (i = 0; i < ez->n_cigar; ++i)
-	{
-		cigar[len++] = ez->cigar[i];
-	}
-
-	return len;
-}
-
 static inline void mm_seq_rev(uint32_t len, uint8_t *seq)
 {
     uint32_t i;
@@ -1087,7 +876,6 @@ uint32_t local_hash_anchor(uint8_t *qseq, uint32_t qlen, uint32_t *idx_cnt_array
 	{
 		return 0;
 	}
-    double t = clock();
 
 	uint32_t i, j;
 	uint32_t pre_pos = 0;
@@ -1116,8 +904,6 @@ uint32_t local_hash_anchor(uint8_t *qseq, uint32_t qlen, uint32_t *idx_cnt_array
 		}
 	}
 
-
-	
 	//have get the anchor idx count, to judge which anchor have be used
 	//sort idx_cnt_array
 	// float max;
@@ -1177,36 +963,10 @@ uint32_t local_hash_anchor(uint8_t *qseq, uint32_t qlen, uint32_t *idx_cnt_array
 	// {
 	// 	idx_cnt_array[i] = temp_arr[i];
 	// }
-
-#ifdef PRINT
-	fprintf(stderr, "real_cnt = %u\n", real_cnt);
-	for ( i = 0; i < real_cnt; ++i)
-    {
-        fprintf(stderr, "idx_cnt_array[%u] = %u\n", i, idx_cnt_array[i]);
-    }
-#endif	
 	// free(temp_arr);
 	free(cov_score);
 
-    hash_time[tid] += (double)(clock() - t)/CLOCKS_PER_SEC;
-
 	return real_cnt;
-}
-
-
-static int count_intron_num(uint32_t *cigar, uint32_t n_cigar)
-{
-	uint32_t i;
-	uint8_t op;
-	int count = 0;
-	for(i = 0; i < n_cigar; ++i)
-	{
-		op = cigar[i]&0xf;
-		// if ((op == 3) || (op == 2 && (cigar[i] >> 4) > 20))
-		if (op == 3)
-			count++;
-	}
-	return count;
 }
 
 
@@ -1332,8 +1092,6 @@ static uint32_t refine_site(uint32_t site, uint8_t strand, uint8_t type)
 	uint32_t r_site = site;
 	uint8_t *ref = (uint8_t* )calloc(len + 2, 4);
 
-	// fprintf(stderr, "strand = %d\n", strand);
-
 	if (type == 0) //donor detect
 	{
 		start = site - range - 5;
@@ -1352,16 +1110,8 @@ static uint32_t refine_site(uint32_t site, uint8_t strand, uint8_t type)
 	{
 		start = site - range - 4;
 		get_refseq(ref, len, start);
-        // int i;
-        // fprintf(stderr, "start = %d, site = %d\n", start, site);
-        // for (i = 0; i < len; ++i)
-        // {
-        //    fprintf(stderr, "%c","ACGT"[ref[i]]);
-        // }
-        // fprintf(stderr, "\n");
 		acceptor_signals_detected(ref, len, start, &s1, &s2, strand);
 
-        // fprintf(stderr, "s1 = %d, s2 = %d\n",s1, s2);
 		if (strand == 0 && s1 != -1) //+
 		{
 			r_site = start + s1 + 1;
@@ -1417,9 +1167,6 @@ int check_realign(void *km, param_map *opt, int bandwith, uint8_t *qseq, uint32_
 	
 	int startidx = 0;
 	uint8_t strand = (splice_flag & MM_F_SPLICE_FOR)? 0 : 1;
-#ifdef PRINT	
-	fprintf(stderr, "star_pos = %u\n", start_pos);
-#endif
 
 	uint32_t **intron_len = (uint32_t **)calloc(intron_cnt, sizeof(uint32_t*));
 	for (i = 0; i < intron_cnt; ++i)
@@ -1446,7 +1193,6 @@ int check_realign(void *km, param_map *opt, int bandwith, uint8_t *qseq, uint32_
 			{
 				op1 = cigar[j]&0xf;
 				op_len1 = (cigar[j]>>4);
-				//if ((op1 == 1 || op1 == 2) && op_len1 > thre && len_read < 5) //the up closest insertion/deletion ; len_read < 5
                 if (op1 == 2 && op_len1 > thre && len_read < 5) //the up closest insertion/deletion ; len_read < 5
 				{
 					re_ali = 1;
@@ -1474,7 +1220,6 @@ int check_realign(void *km, param_map *opt, int bandwith, uint8_t *qseq, uint32_
 			}
 		}
 		//if large D/I
-		// if ((op == 2 || op == 1) && op_len > thre) //if have deletion/insretion long than 20bp
         if (op == 2 && op_len > thre)
 		{
 			len_ref = 0;
@@ -1530,9 +1275,6 @@ int check_realign(void *km, param_map *opt, int bandwith, uint8_t *qseq, uint32_
 			if (left < right)
 			{
 				re_ali1 = 1;
-#ifdef PRINT
-				fprintf(stderr, "i = %d, left = %d, right = %d, re_ali1 = %d\n", i, left, right, re_ali1);
-#endif
 				//refine intron part  >>up
 				int m;
 				len_ref = 0;
@@ -1555,9 +1297,7 @@ int check_realign(void *km, param_map *opt, int bandwith, uint8_t *qseq, uint32_
 				{
 					tmp_start = start_pos + len_ref;
 				}
-				new_donor = refine_site(tmp_start, strand, 0); //donor
-
-                //fprintf(stderr, "donor = %d, new_donor = %d,  %d\n", tmp_start, new_donor, start_pos + len_ref);
+				new_donor = refine_site(tmp_start, strand, 0); //donor);
 
 				for (m = left; m <= right; ++m)
 				{
@@ -1575,8 +1315,6 @@ int check_realign(void *km, param_map *opt, int bandwith, uint8_t *qseq, uint32_
 					tmp_start = start_pos + len_ref;
 				}
 				new_acceptor = refine_site(tmp_start, strand, 1); //donor
-
-                //fprintf(stderr, "acceptor = %d, new_acceptor = %d,  %d\n", tmp_start, new_acceptor, start_pos + len_ref);
 
 				if (new_acceptor <= new_donor)
 				{
@@ -1620,13 +1358,6 @@ int check_realign(void *km, param_map *opt, int bandwith, uint8_t *qseq, uint32_
 		}
 		i = right + 1;
 	}
-#ifdef PRINT
-    fprintf(stderr, "re_ali1 = %d\n", re_ali1);
-	for (i = 0; i < intron_id; ++i)
-	{
-		fprintf(stderr, "s1 = %u, s2 = %u\n", intron_len[i][0], intron_len[i][1]);
-	}
-#endif
 	//
 	uint8_t new_intron_id = intron_id;
 	if (intron_id > 1)
@@ -1665,13 +1396,6 @@ int check_realign(void *km, param_map *opt, int bandwith, uint8_t *qseq, uint32_
             s = intron_len[i][0];
             e = intron_len[i][1];
         }
-		
-#ifdef PRINT
-		for (i = 0; i < new_intron_id; ++i)
-		{
-			fprintf(stderr, "s_new1 = %u, s_new2 = %u\n", intron_len[i][0], intron_len[i][1]);
-		}
-#endif
 	}
 	else
 	{
@@ -1702,9 +1426,6 @@ int check_realign(void *km, param_map *opt, int bandwith, uint8_t *qseq, uint32_
 				s_s = intron_len[i][1];
 			}
 			//last
-#ifdef PRINT
-			fprintf(stderr, "tlen = %d, pre_pos = %d, l = %d\n", tlen, pre_pos, l);
-#endif
 			l = tlen + start_pos - s_s ;
 			if (l > 0)
 			{
@@ -1724,17 +1445,6 @@ int check_realign(void *km, param_map *opt, int bandwith, uint8_t *qseq, uint32_
 		
 
 		align_non_splice(km, qseq, ref, qlen, pre_pos, opt, &ez_tmp, bandwith, 0, 2);
-#ifdef PRINT
-		fprintf(stderr, "ez_tmp_score = %d, pre_score = %d, qlen = %d, tlen = %d\n", ez_tmp.score, pre_score, qlen, pre_pos);
-		if (ez_tmp.n_cigar > 0)
-		{
-			for (i = 0; i < ez_tmp.n_cigar; ++i)
-			{
-				fprintf(stderr, "%d%c", ez_tmp.cigar[i]>>4, "MIDN"[ez_tmp.cigar[i]&0xf]);
-			}
-			fprintf(stderr,"\n");
-		}
-#endif
 		if (ez_tmp.score < pre_score)
 		{
 			re_ali1 = 0;
@@ -1761,18 +1471,6 @@ int check_realign(void *km, param_map *opt, int bandwith, uint8_t *qseq, uint32_
 			ez->cigar[i] = ez_tmp.cigar[i];
 		}
 
-
-#ifdef PRINT
-		if (ez->n_cigar > 0)
-		{
-			fprintf(stderr, "test_cigar----------,score = %d\n", ez->score);
-			for (i = 0; i < ez->n_cigar; ++i)
-			{
-				fprintf(stderr, "%d%c", ez->cigar[i]>>4, "MIDN"[ez->cigar[i]&0xf]);
-			}
-			fprintf(stderr,"\n");
-		}
-#endif
 	}
 
 FREE:
@@ -1789,8 +1487,6 @@ FREE:
 
 void check_cigar(uint8_t *qseq, uint8_t *tseq, uint32_t *cigar, uint32_t *n_cigar, uint32_t *qs, uint32_t *ts, int *score, uint32_t qlen, uint32_t tlen, uint32_t boundary, uint8_t type, param_map *opt)
 {
-	// fprintf(stderr, "type = %d, ts = %d, bound = %d\n", type, *ts, boundary);
-	// int checked = 0;
 	int i;
 	uint8_t op;
 	uint32_t op_len;
@@ -1850,7 +1546,6 @@ void check_cigar(uint8_t *qseq, uint8_t *tseq, uint32_t *cigar, uint32_t *n_ciga
 				if (type == 0) //for left ext
 				{
 					*qs += len_read;
-					// fprintf(stderr, "ts = %d, op_len = %d, len_ref = %d, op_len = %d\n", *ts, op_len, len_ref, cigar[i] >> 4);
 					*ts += (len_ref + op_len);
 				}
 				else //for right ext
@@ -1886,97 +1581,19 @@ void check_cigar(uint8_t *qseq, uint8_t *tseq, uint32_t *cigar, uint32_t *n_ciga
 			score_cut = 0;
 		}
 	}
-	// if (*n_cigar > 3)
-	// 	check_more_part(cigar, n_cigar, score, opt->gap_open2_D);
 	
-	// return checked;
 }
 
 static int check_filter(uint32_t pos1, uint32_t pos2, uint32_t key1, uint32_t key2, uint32_t len)
 {
 	//filter the first and last anchor
 	uint32_t begin = 0;
-	// chromosome_judge(pos2, &begin);
-	// if (pos1 < begin)
 	if (chromosome_judge(pos1, &begin) != chromosome_judge(pos2, &begin))
 		return 1;
 	if ((key1 - key2 > 4) && (len < seed_k_t + 5))
 		return 1;
 
 	return 0;
-}
-
-static void refine_local_finder(uint32_t *cigar, uint32_t n_cigar, int *record_pos, int record_cnt)
-{
-	int i, j = 0;
-#ifdef PRINT
-	for (i = 0; i < record_cnt; ++i)
-	{
-		fprintf(stderr, "record_pos = %d\n", record_pos[i]);
-	}
-#endif
-
-	int match_bp_thre = 10;
-	int record_len = 0;
-	int match_len = 0;
-	int8_t op, pre_op;
-	int op_len, pre_op_len;
-	for (i = 0; i < record_cnt; ++i)
-	{
-		while(j < n_cigar)
-		{
-			op = cigar[j]&0xf;
-			op_len = (cigar[j]>>4);
-			if (record_len < record_pos[i])
-			{
-				if (op == 0)
-				{
-					record_len += op_len;
-					match_len += op_len;
-				}
-				else if (op == 2)
-				{
-					record_len += op_len;
-				}
-				pre_op = op;
-				pre_op_len = op_len;
-				// fprintf(stderr, "idx = %d, op = %d, op_len = %d, record_len = %d\n", j, op, op_len, record_len);
-				j++;
-			}
-			else
-			{
-				if (pre_op == 0)
-				{
-					match_len -= (record_len - record_pos[i]);
-				}
-				record_len = (record_len - record_pos[i]);
-#ifdef PRINT
-				fprintf(stderr, "match_len = %d, record_pos = %d\n", match_len, record_pos[i]);
-#endif
-				if ((match_len < match_bp_thre) && (match_len / (float)record_pos[i] < 0.5))
-				// if (match_len / (float)record_pos[i] < 0.3) //match_rate
-				{
-					record_pos[i] = 0;
-				}
-
-				match_len = (pre_op == 0)? record_len : 0;
-				break;
-			}
-		}
-
-		if (j >= n_cigar)
-		{
-#ifdef PRINT
-			fprintf(stderr, "record_len = %d, match_len = %d, pos = %d\n", record_len, match_len, record_pos[i]);
-#endif
-			if ((match_len < match_bp_thre) && (match_len / (float)record_pos[i] < 0.5))
-			// if (match_len / (float)record_pos[i] < 0.3)
-			{
-				record_pos[i] = 0;
-			}
-			match_len = 0;
-		}
-	}
 }
 
 static int call_mapping_bases(uint32_t *cigar, uint32_t n_cigar)
@@ -2049,7 +1666,7 @@ void align_non_splice(void *km, uint8_t *qseq, uint8_t *tseq, uint32_t qlen, uin
 	}
 }
 
-static int align_core_primary(void *km, uint32_t seqlen, TARGET_t *anchor_map2ref, uint8_t *qseq0[2], uint8_t *qual0[2], _aln_t *aln, param_map *opt, ksw_extz_t *ez, ksw_extz_t *ez2, REF_t *ref_pos, REF_t *ref_temp, QUERY_t *query_pos, int *chr_n, uint32_t anchor_n, uint8_t strand, uint8_t tid, int key_total, int splice_flag, uint32_t left_bound, uint32_t right_bound, char *seqname)
+static void align_core_primary(void *km, uint32_t seqlen, TARGET_t *anchor_map2ref, uint8_t *qseq0[2], uint8_t *qual0[2], _aln_t *aln, param_map *opt, ksw_extz_t *ez, ksw_extz_t *ez2, REF_t *ref_pos, REF_t *ref_temp, QUERY_t *query_pos, int *chr_n, uint32_t anchor_n, uint8_t strand, uint8_t tid, int key_total, int splice_flag, uint32_t left_bound, uint32_t right_bound)
 {
 	int i;
     uint32_t a_n = 0;
@@ -2067,9 +1684,7 @@ static int align_core_primary(void *km, uint32_t seqlen, TARGET_t *anchor_map2re
 	int key_l;
 	int key_r;
 	uint32_t pre_pos = 0;
-
 	uint8_t *tseq = NULL;
-	
 	
 	int score = KSW_NEG_INF;
 	int score1 = KSW_NEG_INF;
@@ -2087,7 +1702,6 @@ static int align_core_primary(void *km, uint32_t seqlen, TARGET_t *anchor_map2re
 	uint32_t te_s;
 	uint32_t qe_s;
 	uint16_t thre1;  //NonaSim: the avearge length of del and ins for ONT2D is 1.81bp and 1.69bp
-	uint16_t thre2;
 	ksw_extz_t *ez_tmp;
 	int *exon_find = (int* )calloc(e_shift,4);
 	uint32_t find_cnt;
@@ -2152,22 +1766,16 @@ static int align_core_primary(void *km, uint32_t seqlen, TARGET_t *anchor_map2re
 	if (qs > 0)
 	{	
 		qlen = qs;
-		thre1 = qs*0.134*0.36*2 + 2 + 5; //or +20
-		thre2 = qs*0.134*0.36*2 + 2;
+		thre1 = qlen*opt->error_overall*opt->error_ins*2 + 5; 
 		a_len = (ts0 > ts1)? (ts0 - ts1) : 0;
 		qseq = &qseq0[strand][0];
 		// key_l = 0;
 		key1 = ref_temp[0].key;
-		if (((int)(qs + ts1 - ts0) > thre1) && (qs - a_len > hash_kmer) && (qs < opt->max_extend_left_right))  //multiple find
+		if (((int)(qs + ts1 - ts0) > thre1) && (qs - a_len > hash_kmer) && (qs < opt->max_extend_left_right))  //local hash procedure
 		{
-#ifdef PRINT
-			fprintf(stderr, "multiple find process\n");
-#endif
 			qlen = qs - a_len;
 			find_cnt = local_hash_anchor(qseq, qlen, exon_find, anchor_map2ref, key_l, key1, opt, 1, tid, 0);
-#ifdef PRINT
-            fprintf(stderr, "find_CNT = %d\n", find_cnt);
-#endif
+
 			if (find_cnt > 0)
 			{
 				pre_pos = 0;
@@ -2201,14 +1809,6 @@ static int align_core_primary(void *km, uint32_t seqlen, TARGET_t *anchor_map2re
 				mm_seq_rev(qlen, qseq);
 				if (ez2->n_cigar > 0)
 				{
-#ifdef PRINT
-					fprintf(stderr, "cigar for mulkey, dp_score = %d, qlen = %d, tlen = %d\n", ez2->max, qs, pre_pos);
-					for (i = 0; i < ez2->n_cigar; ++i)
-					{
-						fprintf(stderr, "%d%c", ez2->cigar[i]>>4, "MIDN"[ez2->cigar[i]&0xf]);
-					}
-					fprintf(stderr,"\n");
-#endif
 					score = ez2->max;
 				}
 				else
@@ -2228,83 +1828,35 @@ static int align_core_primary(void *km, uint32_t seqlen, TARGET_t *anchor_map2re
 			ez2->n_cigar = 0;
 		}
 
+		//left extension directly
 		qlen = qs;
-		if (opt->simulated && (ts0 > ts1) && abs((int)(qlen + ts1 - ts0)) < thre2)
+		l = qlen;
+		int l1 = (l * opt->match_R - opt->gap_open_R)/opt->gap_ex_R;
+		l1 = (l1 > 0)? l1 : 0;
+		l += l1;
+		l = l < opt->max_extend_gap? l : opt->max_extend_gap;
+		l = (l > ts0)? ts0 : l;
+		if (ts0 - l < chr_end_n[*chr_n - 1])
+			l = ts0 - chr_end_n[*chr_n - 1];
+		get_refseq(tseq, l, ts0 - l);
+		mm_seq_rev(qlen, qseq);
+		mm_seq_rev(l, tseq);
+		align_splic_FOR_REV(km, qseq, tseq, qlen, l, extra_flag_R, opt, ez, 0);
+		mm_seq_rev(qlen, qseq);
+		if(ez->n_cigar > 0)
 		{
-			//fprintf(stderr, "left ext_D\n");
-    		tlen = ts0 - ts1;
-#ifdef DEBUG
-			fprintf(stderr, "here1, tlen = %d\n", tlen);
-#endif
-			get_refseq(tseq, tlen, ts1);
+			_ts = ts0 - (ez->reach_end? ez->mqe_t + 1 : ez->max_t + 1); //reference start
+			_qs = qs - (ez->reach_end? 0: ez->max_q + 1); //query start
 
-			align_non_splice(km, qseq, tseq, qlen, tlen, opt, ez, bandwith, extra_flag_D, 2);
-
-			if (ez->n_cigar > 0)
-			{
-#ifdef PRINT
-				fprintf(stderr, "cigar for ext_DNA, dp_score = %d\n", ez->score);
-				for (i = 0; i < ez->n_cigar; ++i)
-				{
-					fprintf(stderr, "%d%c", ez->cigar[i]>>4, "MIDN"[ez->cigar[i]&0xf]);
-				}
-				fprintf(stderr,"\n");
-#endif
-				_ts = ts1;
-				_qs = 0;
-				score1 = ez->score;
-			}
-			else
-			{
-				_ts = ts0;
-				_qs = qs;
-			}
+			score1 = ez->max;
 		}
 		else
 		{
-#ifdef PRINT
-			fprintf(stderr, "left ext_R\n");
-#endif
-			l = qlen;
-			int l1 = (l * opt->match_R - opt->gap_open_R)/opt->gap_ex_R;
-			l1 = (l1 > 0)? l1 : 0;
-			l += l1;
-			l = l < opt->max_extend_gap? l : opt->max_extend_gap;
-			l = (l > ts0)? ts0 : l;
-#ifdef DEBUG
-			fprintf(stderr, "here2, tlen = %d\n", l);
-#endif	
-			if (ts0 - l < chr_end_n[*chr_n - 1])
-				l = ts0 - chr_end_n[*chr_n - 1];
-			get_refseq(tseq, l, ts0 - l);
-			mm_seq_rev(qlen, qseq);
-			mm_seq_rev(l, tseq);
-			align_splic_FOR_REV(km, qseq, tseq, qlen, l, extra_flag_R, opt, ez, 0);
-			mm_seq_rev(qlen, qseq);
-			if(ez->n_cigar > 0)
-			{
-#ifdef PRINT
-				fprintf(stderr, "cigar for ext_RNA, dp_score = %d\n", ez->max);
-				for (i = 0; i < ez->n_cigar; ++i)
-				{
-					fprintf(stderr, "%d%c", ez->cigar[i]>>4, "MIDN"[ez->cigar[i]&0xf]);
-				}
-				fprintf(stderr,"\n");
-#endif
-				_ts = ts0 - (ez->reach_end? ez->mqe_t + 1 : ez->max_t + 1); //reference start
-				_qs = qs - (ez->reach_end? 0: ez->max_q + 1); //query start
-
-			    score1 = ez->max;
-			}
-			else
-			{
-				_ts = ts0;
-				_qs = qs;
-			}
+			_ts = ts0;
+			_qs = qs;
 		}
-
-		//compare score_D and score_R
-		// if (score <= score1)
+		
+		//compare
 		if (score <= score1)
 		{
 			if (ez->n_cigar > 0)
@@ -2312,20 +1864,10 @@ static int align_core_primary(void *km, uint32_t seqlen, TARGET_t *anchor_map2re
 				qlen = qs - _qs;
 				tlen = ts0 - _ts;
 				qseq = &qseq0[strand][_qs];
-#ifdef DEBUG
-				fprintf(stderr, "here3, tlen = %d\n", tlen);
-#endif
+
 				mm_append_cigar(aln, ez->n_cigar, ez->cigar);
 				
 				aln->dp_score += score1;
-#ifdef PRINT
-				fprintf(stderr, "qlen = %u, tlen = %u, dp_score = %d\n", qlen, tlen, score1);
-				for (i = 0; i < ez->n_cigar; ++i)
-				{
-					fprintf(stderr, "%d%c", ez->cigar[i]>>4, "MIDN"[ez->cigar[i]&0xf]);
-				}
-				fprintf(stderr,"\n");
-#endif
 			}
 		}
 		else
@@ -2367,14 +1909,7 @@ static int align_core_primary(void *km, uint32_t seqlen, TARGET_t *anchor_map2re
 						}
 					}
 				}
-#ifdef PRINT
-				fprintf(stderr, "before check, tlen = %d\n", tlen);
-				for (i = 0; i < ez2->n_cigar; ++i)
-				{
-					fprintf(stderr, "%d%c", ez2->cigar[i]>>4, "MIDN"[ez2->cigar[i]&0xf]);
-				}
-				fprintf(stderr,"\n");
-#endif	
+	
 				check_cigar(qseq, temp_ref_left, ez2->cigar, &(ez2->n_cigar), &_qs, &_ts, &score, qlen, tlen, left_bound, 0, opt);
 	
 				mm_seq_rev(qlen, qseq);
@@ -2386,14 +1921,6 @@ static int align_core_primary(void *km, uint32_t seqlen, TARGET_t *anchor_map2re
 					ez2->cigar[i] = ez2->cigar[ez2->n_cigar - 1 - i]; 
 					ez2->cigar[ez2->n_cigar - 1 - i] = tmp;
 				}
-#ifdef PRINT
-				fprintf(stderr, "after check and reverse, tlen = %d\n", tlen);
-				for (i = 0; i < ez2->n_cigar; ++i)
-				{
-					fprintf(stderr, "%d%c", ez2->cigar[i]>>4, "MIDN"[ez2->cigar[i]&0xf]);
-				}
-				fprintf(stderr,"\n");
-#endif
 
 				//check re-align
 				qseq = &qseq0[strand][_qs];
@@ -2405,27 +1932,14 @@ static int align_core_primary(void *km, uint32_t seqlen, TARGET_t *anchor_map2re
 				mm_append_cigar(aln, ez2->n_cigar, ez2->cigar);/////
 				if (sig)
 					score = ez2->score;
-				aln->dp_score += score;
-#ifdef PRINT
-				fprintf(stderr, "qlen = %u, tlen = %u, dp_score = %d\n", qlen, tlen, score);
-				for (i = 0; i < ez2->n_cigar; ++i)
-				{
-					fprintf(stderr, "%d%c", ez2->cigar[i]>>4, "MIDN"[ez2->cigar[i]&0xf]);
-				}
-				fprintf(stderr,"\n");
-#endif		
+				aln->dp_score += score;	
 			}
 		}
 	}
-    int Map_bases_0;
-	int Map_bases_1;
 	while(a_n < anchor_n)
 	{
 		key1 = ref_temp[a_n - 1].key;
 		key2 = ref_temp[a_n].key;
-#ifdef PRINT
-		fprintf(stderr, "key1 = %d, key2 = %d\n", key1, key2);
-#endif
 		if (key2 == key1) //the same id of exon
 		{
 			te1 = te0;
@@ -2455,26 +1969,11 @@ static int align_core_primary(void *km, uint32_t seqlen, TARGET_t *anchor_map2re
 			}
 		}
 		
-		//uint8_t shift2 = 0;
-		//te_s = (ref_pos[a_n].ts < ref_temp[a_n].ts)? ref_temp[a_n].ts : ref_pos[a_n].ts;
-		//qe_s = query_pos[a_n].qs + (te_s - ref_pos[a_n].ts);
-		//q = query_pos[a_n].qe - qe_s;
-		//t = ref_pos[a_n].te - te_s;
-		//if ((q > 2*seed_k_t) && (t > 2*seed_k_t))
-		//{
-		//	shift2 = seed_k_t;
-		//}
-		//else if ((q > seed_k_t) && (t > seed_k_t))
-		//{
-		//	shift2 = seed_k_t >> 1;
-		//}
 		uint8_t shift2 = 0;
 		te_s = (ref_pos[a_n].ts < ref_temp[a_n].ts)? ref_temp[a_n].ts : ref_pos[a_n].ts;
 		qe_s = query_pos[a_n].qs + (te_s - ref_pos[a_n].ts);
 		uint32_t TE = (ref_pos[a_n].te < ref_temp[a_n].te)? ref_pos[a_n].te : ref_temp[a_n].te;
 		int QE = query_pos[a_n].qe + (TE - ref_pos[a_n].te);
-		// q = query_pos[a_n].qe - qe_s;
-		// t = ref_pos[a_n].te - te_s;
 		int TT = TE - te_s;
 		int QQ = QE - qe_s;
 
@@ -2500,32 +1999,17 @@ static int align_core_primary(void *km, uint32_t seqlen, TARGET_t *anchor_map2re
 		qe_ -= shift1;
 		te_s += shift2;
 		qe_s += shift2;
-
-#ifdef PRINT
-		fprintf(stderr, "align the previous anchor\n");
-#endif			
+			
 		qseq = &qseq0[strand][qs];
 		tlen = te_ - ts0 + 1;
 		qlen = qe_ - qs + 1;
-#ifdef DEBUG
-		fprintf(stderr, "shift1 = %d, shift2 = %d\n", shift1, shift2);
-        fprintf(stderr, "ts = %d, te = %d, qs = %d, qe = %d\n", ts0, te_, qs, qe_);
-		fprintf(stderr, "here5, tlen = %d\n", tlen);
-#endif
+
 		get_refseq(tseq, tlen, ts0);
 		align_non_splice(km, qseq, tseq, qlen, tlen, opt, ez, bandwith, extra_flag_D, 2);
 		if (ez->n_cigar > 0)
 		{
 			mm_append_cigar(aln, ez->n_cigar, ez->cigar);
 			aln->dp_score += ez->score;
-#ifdef PRINT
-			fprintf(stderr, "qlen = %u, tlen = %u, dp_score = %d\n", qlen, tlen, ez->score);
-			for (i = 0; i < ez->n_cigar; ++i)
-			{
-				fprintf(stderr, "%d%c", ez->cigar[i]>>4, "MIDN"[ez->cigar[i]&0xf]);
-			}
-			fprintf(stderr,"\n");
-#endif
 		}
 
 		a_len = te1 - te_;
@@ -2534,18 +2018,12 @@ static int align_core_primary(void *km, uint32_t seqlen, TARGET_t *anchor_map2re
 
 		if(qlen == 0)
 		{
-			//fprintf(stderr, "do here\n");
 			aln->cigar[aln->n_cigar++] = (te_s - te_ - 1)<<4 | 3;
 			goto END;
 		}
 		tlen = a_len + b_len;
-		thre1 = tlen*0.134*0.36*1 + 2;  //all insertion (pbsim data)
-		thre2 = tlen*0.134*0.31*1 + 2;  //all deletion
 		if (key2 - key1 <= 1) //have no exon between
-		{
-#ifdef PRINT
-			fprintf(stderr, "key2 - key1 <= 1, a_len = %d, b_len = %d\n", a_len, b_len);
-#endif	
+		{	
 			//for non-splice
 			qseq = &qseq0[strand][qe_ + 1];
 			if (key2 == key1)
@@ -2561,49 +2039,15 @@ static int align_core_primary(void *km, uint32_t seqlen, TARGET_t *anchor_map2re
                 if (ez->n_cigar > 0)
                 {
     				append_intron_to_cigar(km, ez, 0, a_len, ref_temp[a_n].ts - te1 - 1);
-
-
-#ifdef PRINT
-                    fprintf(stderr, "before realign,  ");
-                    fprintf(stderr, "non-splice cigar, N_pos = %u, N_len = %u\n", a_len, ref_temp[a_n].ts - te1 - 1);
-                    fprintf(stderr, "te1 = %d, ts = %d\n", te1, ref_temp[a_n].ts);
-                    for (i = 0; i < ez->n_cigar; ++i)
-                    {
-                        fprintf(stderr, "%d%c", ez->cigar[i]>>4, "MIDN"[ez->cigar[i]&0xf]);
-                    }
-    				fprintf(stderr,"\n");
-#endif
     				check_realign(km, opt, bandwith, qseq, qlen, tlen + ref_temp[a_n].ts - te1 - 1, ez, ez->score, te_ + 1, 10, splice_flag);
                 }			
-#ifdef PRINT
-				fprintf(stderr, "non-splice cigar, N_pos = %u, N_len = %u\n", a_len, ref_temp[a_n].ts - te1 - 1);
-				for (i = 0; i < ez->n_cigar; ++i)
-				{
-					fprintf(stderr, "%d%c", ez->cigar[i]>>4, "MIDN"[ez->cigar[i]&0xf]);
-				}
-				fprintf(stderr,"\n");
-#endif
 			}
 
 			//for splice aligner
-			tlen = te_s - te_ - 1;
-#ifdef DEBUG
-			fprintf(stderr, "here6, tlen = %d\n", tlen);
-#endif				
+			tlen = te_s - te_ - 1;			
 			get_refseq(tseq, tlen, te_ + 1);
 			align_splic_FOR_REV(km, qseq, tseq, qlen, tlen, extra_flag_R, opt, ez2, 2);
-
-#ifdef PRINT
-			for (i = 0; i < ez2->n_cigar; ++i)
-			{
-				fprintf(stderr, "%d%c", ez2->cigar[i]>>4, "MIDN"[ez2->cigar[i]&0xf]);
-			}
-			fprintf(stderr,"\n");
-#endif
-
-#ifdef PRINT
-			fprintf(stderr, "score_D = %d, score_R = %d\n", ez->score, ez2->score);
-#endif			
+			
 			if (ez->score > ez2->score)
 			{
 				ez_tmp = ez;
@@ -2625,22 +2069,12 @@ static int align_core_primary(void *km, uint32_t seqlen, TARGET_t *anchor_map2re
 			
 			mm_append_cigar(aln, ez_tmp->n_cigar, ez_tmp->cigar);
 			aln->dp_score += ez_tmp->score;
-#ifdef PRINT
-			fprintf(stderr, "qlen = %u, tlen = %u, dp_score = %d\n", qlen, tlen, ez_tmp->score);
-			for (i = 0; i < ez_tmp->n_cigar; ++i)
-			{
-				fprintf(stderr, "%d%c", ez_tmp->cigar[i]>>4, "MIDN"[ez_tmp->cigar[i]&0xf]);
-			}
-			fprintf(stderr,"\n");
-#endif
+
 		}
 		else if ((key2 - key1 == 2) && (anchor_map2ref[key1+1].te - anchor_map2ref[key1+1].ts + 1 < 51))
 		{
 			if (qlen > hash_kmer)
 			{
-#ifdef PRINT
-				fprintf(stderr, "have only one exon between condition 1\n");
-#endif
 				tlen = 0;
 				get_ref_onebyone(tseq, te_ + 1, a_len, 0);
 				tlen += a_len;
@@ -2660,15 +2094,7 @@ static int align_core_primary(void *km, uint32_t seqlen, TARGET_t *anchor_map2re
 				{
 					pre_pos = 0;
 					pre_pos = append_intron_to_cigar(km, ez, pre_pos, a_len, s_s - te1 - 1);
-					pre_pos = append_intron_to_cigar(km, ez, pre_pos, s_len, ref_temp[a_n].ts - anchor_map2ref[key1+1].te - 1);
-#ifdef PRINT
-                    fprintf(stderr, "before check_realign\n");
-                    for (i = 0; i < ez->n_cigar; ++i)
-                    {
-                        fprintf(stderr, "%d%c", ez->cigar[i]>>4, "MIDN"[ez->cigar[i]&0xf]);
-                    }
-        			fprintf(stderr,"\n");
-#endif              
+					pre_pos = append_intron_to_cigar(km, ez, pre_pos, s_len, ref_temp[a_n].ts - anchor_map2ref[key1+1].te - 1);              
 				
 					uint32_t tmp = tlen + s_s - te1 - 1 + ref_temp[a_n].ts - anchor_map2ref[key1+1].te - 1;
 
@@ -2678,21 +2104,11 @@ static int align_core_primary(void *km, uint32_t seqlen, TARGET_t *anchor_map2re
                 {
                     ez->score = KSW_NEG_INF;
                     ez->n_cigar = 0;
-                }
-#ifdef PRINT
-                fprintf(stderr, "DNA dp_score = %d\n", ez->score);
-                for (i = 0; i < ez->n_cigar; ++i)
-                {
-                    fprintf(stderr, "%d%c", ez->cigar[i]>>4, "MIDN"[ez->cigar[i]&0xf]);
-                }
-    			fprintf(stderr,"\n");
-#endif              
+                }              
             }
 			else
 			{
-#ifdef PRINT
-				fprintf(stderr, "have only one exon between condition 2, qlen = %d, tlen = %d\n", qlen, tlen);
-#endif	
+				//fprintf(stderr, "have only one exon between condition 2, qlen = %d, tlen = %d\n", qlen, tlen);
 				get_ref_jump(tseq, te_ + 1, a_len, ref_temp[a_n].ts, b_len);
 				qseq = &qseq0[strand][qe_ + 1];
 				align_non_splice(km, qseq, tseq, qlen, tlen, opt, ez, bandwith, extra_flag_D, 2);
@@ -2708,72 +2124,30 @@ static int align_core_primary(void *km, uint32_t seqlen, TARGET_t *anchor_map2re
                     ez->score = KSW_NEG_INF;
                     ez->n_cigar = 0;
                 }
-
-#ifdef PRINT
-				fprintf(stderr, "DNA dp_score = %d\n", ez->score);
-				for (i = 0; i < ez->n_cigar; ++i)
-				{
-					fprintf(stderr, "%d%c", ez->cigar[i]>>4, "MIDN"[ez->cigar[i]&0xf]);
-				}
-				fprintf(stderr,"\n");
-#endif
 			}
 
 			//for RNA aligner
-			tlen = te_s - te_ - 1;
-#ifdef DEBUG				
-			fprintf(stderr, "here7, tlen = %d\n", tlen);
-#endif				
+			tlen = te_s - te_ - 1;			
 			get_refseq(tseq, tlen, te_ + 1);
 			align_splic_FOR_REV(km, qseq, tseq, qlen, tlen, extra_flag_R, opt, ez2, 2);
-
-#ifdef PRINT
-			fprintf(stderr, "RNA dp_score = %d\n", ez2->score);
-			for (i = 0; i < ez2->n_cigar; ++i)
-			{
-				fprintf(stderr, "%d%c", ez2->cigar[i]>>4, "MIDN"[ez2->cigar[i]&0xf]);
-			}
-			fprintf(stderr,"\n");
-#endif
-
-#ifdef PRINT				
-			fprintf(stderr, "score_D = %d, score_R = %d\n", ez->score, ez2->score);
-#endif				
-            //Map_bases_0 = call_mapping_bases(ez->cigar, ez->n_cigar);
-		    //Map_bases_1 = call_mapping_bases(ez2->cigar, ez2->n_cigar);
+			
 			ez_tmp = (ez->score > ez2->score)? ez : ez2;
-            //fprintf(stderr, "map_bases_0 = %d, map_bases_1 = %d\n", Map_bases_0, Map_bases_1);
-            //ez_tmp = (Map_bases_0 > Map_bases_1)? ez : ez2;
 
 			mm_append_cigar(aln, ez_tmp->n_cigar, ez_tmp->cigar);
 			if (ez_tmp->n_cigar > 0)
 				aln->dp_score += ez_tmp->score;
-#ifdef PRINT
-			fprintf(stderr, "qlen = %u, tlen = %u, dp_score = %d\n", qlen, tlen, ez_tmp->score);
-			for (i = 0; i < ez_tmp->n_cigar; ++i)
-			{
-				fprintf(stderr, "%d%c", ez_tmp->cigar[i]>>4, "MIDN"[ez_tmp->cigar[i]&0xf]);
-			}
-			fprintf(stderr,"\n");
-#endif
 		}
 		else //have exons between, key2 - key1 > 1
 		{
-			//for non-splice aligner
-			//if ((qlen > Eindel) && (key2 - key1 < 6))
             if (qlen > Eindel && key2 - key1 < 10)
 			{
-#ifdef PRINT
-				fprintf(stderr, "key2 - key1 > 1, key1 = %u, key2 = %u, condition 1_find exons\n", key1, key2);
-#endif	
+				// fprintf(stderr, "key2 - key1 > 1, key1 = %u, key2 = %u, condition 1_find exons\n", key1, key2);
 				key1++;
 				//find exons between
 				uint32_t n = key2 - key1;
 				uint32_t *idx_cnt_array;
 				idx_cnt_array = (int* )calloc(n, sizeof(int));
 
-				// qseq = &qseq0[strand][qe_ + a_len];
-				// qlen = (int)(qe_s - qe_ - 1 - a_len - b_len);
                 qseq = &qseq0[strand][qe_ + 1];
                 qlen = qe_s - qe_ - 1;
 				
@@ -2819,18 +2193,6 @@ static int align_core_primary(void *km, uint32_t seqlen, TARGET_t *anchor_map2re
                         tmp += ref_temp[a_n].ts - s_e - 1;
 						pre_pos = append_intron_to_cigar(km, ez, pre_pos, s_e - s_s + 1, ref_temp[a_n].ts - s_e - 1);
 
-#ifdef PRINT
-						if (ez->n_cigar > 0)
-						{
-							fprintf(stderr, "DNA score = %d\n", ez->score);
-							for (i = 0; i < ez->n_cigar; ++i)
-							{
-								fprintf(stderr, "%d%c", ez->cigar[i]>>4, "MIDN"[ez->cigar[i]&0xf]);
-							}
-							fprintf(stderr,"\n");
-						}
-#endif
-
                         check_realign(km, opt, bandwith, qseq, qlen, tmp, ez, ez->score, te_ + 1, (real_cnt<<1) + 10, splice_flag);
 					}
                     else
@@ -2840,10 +2202,7 @@ static int align_core_primary(void *km, uint32_t seqlen, TARGET_t *anchor_map2re
                     }
 				}	
                 else
-				{
-#ifdef PRINT
-					fprintf(stderr, "key2 - key1 > 0, key1 = %u, key2 = %u, condition 2_D\n", key1, key2);
-#endif	
+				{	
 					get_ref_jump(tseq, te_ + 1, a_len, ref_temp[a_n].ts, b_len);
 					qseq = &qseq0[strand][qe_ + 1];
 					align_non_splice(km, qseq, tseq, qlen, tlen, opt, ez, bandwith, extra_flag_D, 2);
@@ -2864,9 +2223,6 @@ static int align_core_primary(void *km, uint32_t seqlen, TARGET_t *anchor_map2re
 			}
 			else
             {
-#ifdef PRINT
-                fprintf(stderr, "key2 - key1 > 0, key1 = %u, key2 = %u, condition 2_D\n", key1, key2);
-#endif	
                 get_ref_jump(tseq, te_ + 1, a_len, ref_temp[a_n].ts, b_len);
                 qseq = &qseq0[strand][qe_ + 1];
                 align_non_splice(km, qseq, tseq, qlen, tlen, opt, ez, bandwith, extra_flag_D, 2);
@@ -2884,73 +2240,34 @@ static int align_core_primary(void *km, uint32_t seqlen, TARGET_t *anchor_map2re
                 }
             }
 
-
 			//for splice aligner
             qseq = &qseq0[strand][qe_ + 1];
             qlen = qe_s - qe_ - 1;
 			tlen = te_s - te_ - 1;
-
-#ifdef DEBUG				
-			fprintf(stderr, "here8, tlen = %d\n", tlen);
-#endif				
+				
 			get_refseq(tseq, tlen, te_ + 1);
 			align_splic_FOR_REV(km, qseq, tseq, qlen, tlen, extra_flag_R, opt, ez2, 2);
-
-#ifdef PRINT
-			fprintf(stderr, "key2 - key1 > 1, splice cigar\n");
-			for (i = 0; i < ez2->n_cigar; ++i)
-			{
-				fprintf(stderr, "%d%c", ez2->cigar[i]>>4, "MIDN"[ez2->cigar[i]&0xf]);
-			}
-			fprintf(stderr,"\n");
-#endif
-
-#ifdef PRINT				
-			fprintf(stderr, "score_D = %d, score_R = %d\n", ez->score, ez2->score);
-#endif				
-            //Map_bases_0 = call_mapping_bases(ez->cigar, ez->n_cigar);
-		    //Map_bases_1 = call_mapping_bases(ez2->cigar, ez2->n_cigar);
-            //fprintf(stderr, "map_bases_0 = %d, map_bases_1 = %d\n", Map_bases_0, Map_bases_1);
-            //ez_tmp = (Map_bases_0 > Map_bases_1)? ez : ez2;
 
 			ez_tmp = (ez->score > ez2->score)? ez : ez2;
 
 			mm_append_cigar(aln, ez_tmp->n_cigar, ez_tmp->cigar);
 			if (ez_tmp->n_cigar > 0)
 				aln->dp_score += ez_tmp->score;
-#ifdef PRINT
-			fprintf(stderr, "qlen = %u, tlen = %u, dp_score = %d\n", qlen, tlen, ez_tmp->score);
-			for (i = 0; i < ez_tmp->n_cigar; ++i)
-			{
-				fprintf(stderr, "%d%c", ez_tmp->cigar[i]>>4, "MIDN"[ez_tmp->cigar[i]&0xf]);
-			}
-			fprintf(stderr,"\n");
-#endif
 		}
 END:
 		qs = qe_s;
-		// qs = query_pos[a_n].qs;
 		qe = query_pos[a_n].qe;
 		ts0 = te_s;
-		// ts0 = ref_pos[a_n].ts;
 		te0 = ref_pos[a_n].te;
 		ts1 = ts0;
-		// ts1 = ref_temp[a_n].ts;
 		te1 = ref_temp[a_n].te;
-		// fprintf(stderr, "qs = %u, qe = %u, ts0 = %u, te0 = %u, ts1 = %u, te1 = %u\n", qs, qe, ts0, te0, ts1, te1);
 		a_n++;
 	}
 
 	//align the last anchor
-#ifdef PRINT
-	fprintf(stderr, "align the last anchor\n");
-#endif	
 	qlen = qe - qs + 1;
 	tlen = te0 - ts0 + 1;
 	qseq = &qseq0[strand][qs];
-#ifdef DEBUG	
-	fprintf(stderr, "here9, qlen = %d, tlen = %d\n", qlen, tlen);
-#endif	
 	get_refseq(tseq, tlen, ts0);
 
 	align_non_splice(km, qseq, tseq, qlen, tlen, opt, ez, bandwith, extra_flag_D, 2);
@@ -2959,15 +2276,6 @@ END:
     {
         mm_append_cigar(aln, ez->n_cigar, ez->cigar);
         aln->dp_score += ez->score;
-
-#ifdef PRINT
-        fprintf(stderr, "qlen = %u, tlen = %u, dp_score = %d\n", qlen, tlen, ez->score);
-        for (i = 0; i < ez->n_cigar; ++i)
-        {
-            fprintf(stderr, "%d%c", ez->cigar[i]>>4, "MIDN"[ez->cigar[i]&0xf]);
-        }
-        fprintf(stderr,"\n");
-#endif
     }
 
 	//right extension
@@ -2980,11 +2288,7 @@ END:
     uint8_t *temp_ref_right = NULL;
 	if (qlen > 0)
 	{
-#ifdef PRINT
-        fprintf(stderr, "right extension\n");
-#endif
-		thre1 = qlen*0.134*0.36*2 + 2 + 5; //or +20  minimum exon len
-		thre2 = qlen*0.134*0.36*2 + 2;
+		thre1 = qlen*opt->error_overall*opt->error_ins*2 + 5; 
 		a_len = (te1 > te0)? (te1 - te0) : 0;
 		key2 = ref_temp[anchor_n - 1].key + 1;
 		// key_r = key_total;
@@ -3030,14 +2334,6 @@ END:
 
 				if (ez2->n_cigar > 0)
 				{
-#ifdef PRINT
-					fprintf(stderr, "cigar for mulkey, dp_score = %d\n", ez2->max);
-					for (i = 0; i < ez2->n_cigar; ++i)
-					{
-						fprintf(stderr, "%d%c", ez2->cigar[i]>>4, "MIDN"[ez2->cigar[i]&0xf]);
-					}
-					fprintf(stderr,"\n");
-#endif
 					score = ez2->max;
 				}
 				else
@@ -3057,100 +2353,44 @@ END:
 			ez2->n_cigar = 0;
 		}
 
+		//right extension directly
 		qlen = seqlen - qe - 1;
 		qseq = &qseq0[strand][qe+1];
-		if (opt->simulated && (te1 > te0) && abs((int)(qlen + te0 - te1)) < thre2)
+		l = qlen;
+		int l2 = (l * opt->match_R - opt->gap_open_R)/opt->gap_ex_R;
+		l2 = (l2 > 0)? l2 : 0;
+		l += l2;
+		l = l < opt->max_extend_gap? l : opt->max_extend_gap;			
+		get_refseq(tseq, l, te0 + 1);
+
+		align_splic_FOR_REV(km, qseq, tseq, qlen, l, extra_flag_R, opt, ez, 1);
+
+		if(ez->n_cigar > 0)
 		{
-#ifdef PRINT
-			fprintf(stderr, "right ext_D\n");
-#endif
-    		tlen = te1 - te0;
-#ifdef DEBUG			
-			fprintf(stderr, "here10, tlen = %d\n", tlen);
-#endif			
-			get_refseq(tseq, tlen, te0 + 1);
-
-			align_non_splice(km, qseq, tseq, qlen, tlen, opt, ez, bandwith, extra_flag_D, 2);
-
-			if (ez->n_cigar > 0)
-			{
-#ifdef PRINT
-				fprintf(stderr, "cigar for ext_DNA, dp_score = %d\n", ez->score);
-				for (i = 0; i < ez->n_cigar; ++i)
-				{
-					fprintf(stderr, "%d%c", ez->cigar[i]>>4, "MIDN"[ez->cigar[i]&0xf]);
-				}
-				fprintf(stderr,"\n");
-#endif
-				_te = te1;
-				_qe = seqlen - 1;
-				score1 = ez->score;
-			}
-			else
-			{
-				_te = te0;
-				_qe = qe;
-			}
+			_te = te0 + (ez->reach_end? ez->mqe_t + 1 : ez->max_t + 1); //reference end
+			_qe = qe + (ez->reach_end? seqlen - qe - 1 : ez->max_q + 1); //query end;
+			score1 = ez->max;
 		}
 		else
 		{
-			l = qlen;
-			int l2 = (l * opt->match_R - opt->gap_open_R)/opt->gap_ex_R;
-			l2 = (l2 > 0)? l2 : 0;
-			l += l2;
-			l = l < opt->max_extend_gap? l : opt->max_extend_gap;
-#ifdef DEBUG			
-			fprintf(stderr, "here11, tlen = %d\n", l);
-#endif			
-			get_refseq(tseq, l, te0 + 1);
-
-			align_splic_FOR_REV(km, qseq, tseq, qlen, l, extra_flag_R, opt, ez, 1);
-
-			if(ez->n_cigar > 0)
-			{
-#ifdef PRINT
-				fprintf(stderr, "cigar for ext_RNA, dp_score = %d\n", ez->max);
-				for (i = 0; i < ez->n_cigar; ++i)
-				{
-					fprintf(stderr, "%d%c", ez->cigar[i]>>4, "MIDN"[ez->cigar[i]&0xf]);
-				}
-				fprintf(stderr,"\n");
-#endif
-				_te = te0 + (ez->reach_end? ez->mqe_t + 1 : ez->max_t + 1); //reference end
-				_qe = qe + (ez->reach_end? seqlen - qe - 1 : ez->max_q + 1); //query end;
-			    score1 = ez->max;
-			}
-			else
-			{
-				_te = te0;
-				_qe = qe;
-			}
+			_te = te0;
+			_qe = qe;
 		}
 
+		//compare
 		if (score <= score1)
 		{
 			if (ez->n_cigar > 0)
 			{
 				qlen = _qe - qe;
 				tlen = _te - te0;
-				// qseq = &qseq0[strand][qe + 1];
-#ifdef DEBUG				
-				fprintf(stderr, "here12, tlen = %d\n", tlen);
-#endif				
+				
 				mm_append_cigar(aln, ez->n_cigar, ez->cigar);
 				if (_qe < seqlen - 1)//have soft clip
 				{
 					aln->cigar[aln->n_cigar++] = (seqlen - 1 - _qe)<<4 | 4;
 				}
 				aln->dp_score += score1;
-#ifdef PRINT
-				fprintf(stderr, "qlen = %u, tlen = %u, dp_score = %d\n", qlen, tlen, score1);
-				for (i = 0; i < ez->n_cigar; ++i)
-				{
-					fprintf(stderr, "%d%c", ez->cigar[i]>>4, "MIDN"[ez->cigar[i]&0xf]);
-				}
-				fprintf(stderr,"\n");
-#endif
 			}
 			else
 			{
@@ -3172,7 +2412,6 @@ END:
 				pre_pos = 0;
 				if (_te > te1) //include
 				{
-					// fprintf(stderr, "te0 = %d, te1 = %d\n", te0, te1);
 					intron_len = anchor_map2ref[exon_find[0] + key2].ts - te1 - 1;
 					pre_pos = append_intron_to_cigar(km, ez2, pre_pos, a_len, intron_len);
 					ext_len -= a_len;
@@ -3195,16 +2434,6 @@ END:
 						}
 					}
 				}
-				
-#ifdef PRINT
-				fprintf(stderr, "before check, _te = %d, tlen = %d\n", _te, tlen);
-				fprintf(stderr, "qlen = %u, tlen = %u, dp_score = %d\n", qlen, tlen, score);
-				for (i = 0; i < ez2->n_cigar; ++i)
-				{
-					fprintf(stderr, "%d%c", ez2->cigar[i]>>4, "MIDN"[ez2->cigar[i]&0xf]);
-				}
-				fprintf(stderr,"\n");
-#endif
 
 				check_cigar(qseq, temp_ref_right, ez2->cigar, &(ez2->n_cigar), &_qe, &_te, &score, qlen, tlen, right_bound, 1, opt);
 				
@@ -3224,17 +2453,7 @@ END:
 				if (_qe < seqlen - 1)//have soft clip
 				{
 					aln->cigar[aln->n_cigar++] = (seqlen - 1 - _qe)<<4 | 4;
-				}
-
-#ifdef PRINT
-				fprintf(stderr, "after check, _te = %d, tlen = %d\n", _te, tlen);
-				fprintf(stderr, "qlen = %u, tlen = %u, dp_score = %d\n", qlen, tlen, score);
-				for (i = 0; i < ez2->n_cigar; ++i)
-				{
-					fprintf(stderr, "%d%c", ez2->cigar[i]>>4, "MIDN"[ez2->cigar[i]&0xf]);
-				}
-				fprintf(stderr,"\n");
-#endif	
+				}	
 			}
 			else
 			{
@@ -3252,10 +2471,7 @@ END:
         tseq = (uint8_t *)krealloc(km, tseq, tlen);
     }
 	get_refseq(tseq, tlen, _ts);
-#ifdef PRINT
-	fprintf(stderr, "qlen = %d, tlen = %d, ts = %u, te = %u\n", qlen, tlen, _ts, _te);
-#endif
-	mm_update_extra(aln, qseq, tseq, qlen, tlen, &_qs, &_ts, opt->gap_open_R, opt->gap_ex_R, seqname);
+	mm_update_extra(aln, qseq, tseq, qlen, tlen, &_qs, &_ts, opt->gap_open_R, opt->gap_ex_R);
 
 	//ending I/D 
 	int op = aln->cigar[aln->n_cigar - 1]&0xf;
@@ -3284,345 +2500,13 @@ END:
 	//set alignment start pos
 	aln->_1_based_pos = _ts;
 
-#ifdef PRINT
-	fprintf(stderr, "score = %d, max = %d, n_cigar = %d\n", aln->dp_score, aln->dp_max, aln->n_cigar);
-	for (i = 0; i < aln->n_cigar; ++i)
-    {
-        fprintf(stderr, "%d%c", aln->cigar[i]>>4, "MIDNS"[aln->cigar[i]&0xf]);
-    }
-    fprintf(stderr,"\n");
-#endif
-
     if (temp_ref_right != NULL) free(temp_ref_right);
     if (temp_ref_left != NULL) free(temp_ref_left);
 	free(exon_find);
 	kfree(km, tseq);
-
-	return count_intron_num(aln->cigar, aln->n_cigar);
 }
 
-static void align_core_secondary(void *km, uint32_t seqlen, uint8_t *qseq0[2], uint8_t *qual0[2], _aln_t *aln, param_map *opt, ksw_extz_t *ez, REF_t *ref_pos, QUERY_t *query_pos, int *chr_n, uint32_t anchor_n, uint8_t strand, int splice_flag, char *seqname)
-{
-	int i;
-    uint32_t a_n = 0;
-    int extra_flag_D = 0;
-	int extra_flag_R = 0;
-    int bandwith = (int)(opt->bw * 1.5 + 1.);
-    uint32_t qlen, tlen;
-    uint8_t *qseq;
-	uint8_t *tseq;
-
-	// extra_flag_R |= splice_flag; 
-	if (splice_flag & MM_F_SPLICE_FOR) extra_flag_R |= strand? KSW_EZ_SPLICE_REV : KSW_EZ_SPLICE_FOR;
-	if (splice_flag & MM_F_SPLICE_REV) extra_flag_R |= strand? KSW_EZ_SPLICE_FOR : KSW_EZ_SPLICE_REV;
-	extra_flag_R |= KSW_EZ_SPLICE_FLANK;
-
-	uint32_t qs, qe, ts, te;
-	uint32_t _qs, _qe, _ts, _te;
-	uint32_t te_;
-	uint32_t qe_;
-	uint32_t te_s;
-	uint32_t qe_s;
-
-	qs = query_pos[a_n].qs;
-	qe = query_pos[a_n].qe;
-	ts = ref_pos[a_n].ts;
-	te = ref_pos[a_n].te;
-	a_n++;
-
-	_qs = qs;
-	_ts = ts;
-
-    tlen = ref_pos[anchor_n - 1].te - ref_pos[0].ts + 2*opt->max_extend_gap;
-	tseq = (uint8_t*)kmalloc(km, tlen);
-#ifdef PRINT
-	fprintf(stderr, "tlen = %d\n", tlen);
-#endif
-	
-	//left extension
-	int l;
-	if (qs > 0)
-	{	
-		qlen = qs;
-		qseq = &qseq0[strand][0];
-#ifdef PRINT	
-        fprintf(stderr, "left ext_R\n");
-#endif
-        l = qlen;
-        int l1 = (l * opt->match_R - opt->gap_open_R)/opt->gap_ex_R;
-        l1 = (l1 > 0)? l1 : 0;
-        l += l1;
-        l = l < opt->max_extend_gap? l : opt->max_extend_gap;
-        l = (l > ts)? ts : l;
-
-        get_refseq(tseq, l, ts - l);
-        mm_seq_rev(qlen, qseq);
-        mm_seq_rev(l, tseq);
-        align_splic_FOR_REV(km, qseq, tseq, qlen, l, extra_flag_R, opt, ez, 0);
-        mm_seq_rev(qlen, qseq);
-        if(ez->n_cigar > 0)
-        {
-            _ts = ts - (ez->reach_end? ez->mqe_t + 1 : ez->max_t + 1); //reference start
-            _qs = qs - (ez->reach_end? 0: ez->max_q + 1); //query start
-
-            // qseq = &qseq0[strand][_qs];
-            // get_refseq(tseq, ts - _ts, _ts);
-            qlen = qs - _qs;
-            tlen = ts - _ts;
-            mm_append_cigar(aln, ez->n_cigar, ez->cigar);
-            aln->dp_score += ez->max;
-
-#ifdef PRINT
-			fprintf(stderr, "left ext, qlen = %u, tlen = %u, dp_score = %d\n", qlen, tlen, ez->max);
-			for (i = 0; i < ez->n_cigar; ++i)
-			{
-				fprintf(stderr, "%d%c", ez->cigar[i]>>4, "MIDN"[ez->cigar[i]&0xf]);
-			}
-			fprintf(stderr, "\n");
-#endif
-        }
-        // else
-        // {
-        //     aln->cigar[aln->n_cigar++] = (qs)<<4 | 4;
-        // }
-	}
-	
-	while(a_n < anchor_n)
-	{
-		if (query_pos[a_n].qs == qe + 1) //continous in read, alignment for two anchor directly
-		{
-#ifdef PRINT
-			fprintf(stderr, "in here qs == qe + 1\n");
-#endif			
-			//align the previous one for DNA aligner
-			qlen = qe - qs + 1;
-			tlen = te - ts + 1;
-			qseq = &qseq0[strand][qs];
-
-			get_refseq(tseq, tlen, ts);
-			align_non_splice(km, qseq, tseq, qlen, tlen, opt, ez, bandwith, extra_flag_D, 2);
-			if (ez->n_cigar > 0)
-	        {
-	            mm_append_cigar(aln, ez->n_cigar, ez->cigar);
-	            aln->dp_score += ez->score;
-#ifdef PRINT
-	            fprintf(stderr, "qlen = %u, tlen = %u, dp_score = %d\n", qlen, tlen, ez->score);
-	            for (i = 0; i < ez->n_cigar; ++i)
-		        {
-		            fprintf(stderr, "%d%c", ez->cigar[i]>>4, "MIDN"[ez->cigar[i]&0xf]);
-		        }
-		        fprintf(stderr, "\n");
-#endif
-	        }
-	        //push the intron to the cigar
-            aln->cigar[aln->n_cigar++] = (ref_pos[a_n].ts - te - 1)<<4 | 3; //N
-
-            qs = query_pos[a_n].qs;
-			qe = query_pos[a_n].qe;
-			ts = ref_pos[a_n].ts;
-			te = ref_pos[a_n].te;
-            a_n++;
-		}
-		else
-		{
-			uint8_t shift1 = 0;
-			int q = qe - qs;
-			int t = te - ts;
-			if ((q > 2*seed_k_t) && (t > 2*seed_k_t))
-			{
-				shift1 = seed_k_t;
-			}
-			else if ((q > seed_k_t) && (t > seed_k_t))
-			{
-				shift1 = seed_k_t >> 1;
-			}
-			uint8_t shift2 = 0;
-			q = query_pos[a_n].qe - query_pos[a_n].qs;
-			t = ref_pos[a_n].te - ref_pos[a_n].ts;
-			if ((q > 2*seed_k_t) && (t > 2*seed_k_t))
-			{
-				shift2 = seed_k_t;
-			}
-			else if ((q > seed_k_t) && (t > seed_k_t))
-			{
-				shift2 = seed_k_t >> 1;
-			}
-			
-			te_ = te - shift1;
-			qe_ = qe - shift1;
-			
-            te_s = ref_pos[a_n].ts + shift2;
-			qe_s = query_pos[a_n].qs + shift2;
-			
-			//the previous anchor
-			qseq = &qseq0[strand][qs];
-			tlen = te_ - ts + 1;
-			qlen = qe_ - qs + 1;
-			get_refseq(tseq, tlen, ts);
-			align_non_splice(km, qseq, tseq, qlen, tlen, opt, ez, bandwith, extra_flag_D, 2);
-			if (ez->n_cigar > 0)
-	        {
-	            mm_append_cigar(aln, ez->n_cigar, ez->cigar);
-	            aln->dp_score += ez->score;
-#ifdef PRINT
-	            fprintf(stderr, "previous anchor, qlen = %u, tlen = %u, dp_score = %d\n", qlen, tlen, ez->score);
-	        	for (i = 0; i < ez->n_cigar; ++i)
-		        {
-		            fprintf(stderr, "%d%c", ez->cigar[i]>>4, "MIDN"[ez->cigar[i]&0xf]);
-		        }
-		        fprintf(stderr,"\n");
-#endif
-	        }
-
-			//align the gap
-			qlen = qe_s - qe_ - 1;
-			tlen = te_s - te_ - 1;
-            qseq = &qseq0[strand][qe_ + 1];
-            get_refseq(tseq, tlen, te_ + 1);
-            align_splic_FOR_REV(km, qseq, tseq, qlen, tlen, extra_flag_R, opt, ez, 2);
-
-            if (ez->n_cigar > 0)
-            {
-#ifdef PRINT
-				fprintf(stderr, "the gap, qlen = %u, tlen = %u, dp_score = %d\n", qlen, tlen, ez->score);
-				for (i = 0; i < ez->n_cigar; ++i)
-				{
-					fprintf(stderr, "%d%c", ez->cigar[i]>>4, "MIDN"[ez->cigar[i]&0xf]);
-				}
-				fprintf(stderr,"\n");
-#endif
-                mm_append_cigar(aln, ez->n_cigar, ez->cigar);
-		    	aln->dp_score += ez->score;
-            }
-			
-			qs = qe_s;
-			qe = query_pos[a_n].qe;
-			ts = te_s;
-			te = ref_pos[a_n].te;
-			a_n++;
-		}
-	}
-	//align the last anchor
-#ifdef PRINT
-	fprintf(stderr, "align the last anchor\n");
-#endif	
-	qlen = qe - qs + 1;
-	tlen = te - ts + 1;
-	qseq = &qseq0[strand][qs];
-	get_refseq(tseq, tlen, ts);
-	align_non_splice(km, qseq, tseq, qlen, tlen, opt, ez, bandwith, extra_flag_D, 2);
-
-	if (ez->n_cigar > 0)
-    {
-        mm_append_cigar(aln, ez->n_cigar, ez->cigar);
-        aln->dp_score += ez->score;
-
-#ifdef PRINT
-        fprintf(stderr, "qlen = %u, tlen = %u, dp_score = %d\n", qlen, tlen, ez->score);
-        for (i = 0; i < ez->n_cigar; ++i)
-        {
-            fprintf(stderr, "%d%c", ez->cigar[i]>>4, "MIDN"[ez->cigar[i]&0xf]);
-        }
-        fprintf(stderr,"\n");
-#endif
-    }
-
-	//right extension
-	_te = te;
-	_qe = qe;
-    qlen = seqlen - qe - 1;
-	if (qlen > 0)
-	{
-        l = qlen;
-        int l2 = (l * opt->match_R - opt->gap_open_R)/opt->gap_ex_R;
-        l2 = (l2 > 0)? l2 : 0;
-        l += l2;
-        l = l < opt->max_extend_gap? l : opt->max_extend_gap;
-
-		qseq = &qseq0[strand][qe+1];
-        get_refseq(tseq, l, te + 1);
-		align_splic_FOR_REV(km, qseq, tseq, qlen, l, extra_flag_R, opt, ez, 1);
-        if (ez->n_cigar > 0)
-        {
-            _te = te + (ez->reach_end? ez->mqe_t + 1 : ez->max_t + 1); //reference end
-			_qe = qe + (ez->reach_end? seqlen - qe - 1 : ez->max_q + 1); //query end;
-
-            qlen = _qe - qe;
-            tlen = _te - te;
-            // get_refseq(tseq, tlen, te + 1);
-            mm_append_cigar(aln, ez->n_cigar, ez->cigar);
-            aln->dp_score += ez->max;
-
-#ifdef PRINT
-            fprintf(stderr, "right ext, qlen = %u, tlen = %u, dp_score = %d\n", qlen, tlen, ez->max);
-            for (i = 0; i < ez->n_cigar; ++i)
-            {
-                fprintf(stderr, "%d%c", ez->cigar[i]>>4, "MIDN"[ez->cigar[i]&0xf]);
-            }
-            fprintf(stderr,"\n");
-#endif
-            if (_qe < seqlen - 1)//have soft clip
-            {
-                aln->cigar[aln->n_cigar++] = (seqlen - 1 - _qe)<<4 | 4;
-            }
-        }
-        else
-        {
-            aln->cigar[aln->n_cigar++] = (seqlen - qe - 1)<<4 | 4;
-        }
-	}
-
-	//update
-	qlen = _qe - _qs + 1;
-	tlen = _te - _ts + 1;
-	qseq = &qseq0[strand][_qs];
-	get_refseq(tseq, tlen, _ts);
-#ifdef PRINT
-	fprintf(stderr, "tlen = %d, ts = %d, te = %d, qs = %d, qe = %d\n", tlen, _ts, _te, _qs, _qe);
-#endif
-	mm_update_extra(aln, qseq, tseq, qlen, tlen, &_qs, &_ts, opt->gap_open_R, opt->gap_ex_R, seqname);
-	//ending I/D 
-	int op = aln->cigar[aln->n_cigar - 1]&0xf;
-	int op_len;
-	if ( op == 1 ) //ending I
-	{
-		op_len = aln->cigar[aln->n_cigar - 1] >> 4;
-		aln->cigar[aln->n_cigar - 1] = op_len << 4 | 4;
-	}
-	else if (op == 2)// ending D
-	{
-		aln->n_cigar -= 1;
-	}
-
-	if(_qs > 0)
-	{
-		int j;
-		for (j = aln->n_cigar - 1; j >= 0; --j)
-		{
-			aln->cigar[j + 1] = aln->cigar[j];
-		}
-		aln->cigar[0] = _qs<<4 | 4;
-		aln->n_cigar ++;
-	}
-	uint32_t left_bound;
-	*chr_n = chromosome_judge(_ts, &left_bound);
-
-	//set alignment start pos
-	aln->_1_based_pos = _ts;
-
-#ifdef PRINT
-	fprintf(stderr, "score = %d, n_cigar = %d\n", aln->dp_score, aln->n_cigar);
-	for (i = 0; i < aln->n_cigar; ++i)
-    {
-        fprintf(stderr, "%d%c", aln->cigar[i]>>4, "MIDNS"[aln->cigar[i]&0xf]);
-    }
-    fprintf(stderr,"\n");
-#endif
-
-	kfree(km, tseq);
-}
-
-static uint32_t find_merge_anchor(TARGET_t *anchor_map2ref, REF_t *ref_temp, REF_t *ref_pos, QUERY_t *query_pos, uint32_t anchor_n, int primary, uint32_t *new_n)
+static int find_merge_anchor(TARGET_t *anchor_map2ref, REF_t *ref_temp, REF_t *ref_pos, QUERY_t *query_pos, uint32_t anchor_n, int primary, uint32_t *new_n, param_map *opt)
 {
 	uint32_t i,j;
 	int key = 0;
@@ -3694,30 +2578,6 @@ static uint32_t find_merge_anchor(TARGET_t *anchor_map2ref, REF_t *ref_temp, REF
 		}	
 	}
 
-    //method1
-	// if (primary == 0)
-	// {
-	//     int cnt = 0;
-	// 	for (i = 0; i < anchor_n; ++i)
-	// 	{
-	// 		if (ref_temp[i].key != -1)
-	// 			cnt++;
-	// 	}
-    //     if (cnt < 3*anchor_n/4)
-	// 	    return 0;
-	// }
-
-//in order to print ref_temp, we give the value to ref_temp, but later, we should remove it*************************
-#ifdef PRINT	
-	fprintf(stderr, "after find merged anchor-----------------------\n");
-    uint32_t chr_begin;
-	chromosome_judge(ref_temp[1].ts, &chr_begin);
-	for ( i = 0; i < anchor_n; ++i)
-	{
-		fprintf(stderr, "%u-%u-%u-%u-%u-%u-%d\n", query_pos[i].qs, query_pos[i].qe, ref_pos[i].ts - chr_begin, ref_pos[i].te - chr_begin, ref_temp[i].ts - chr_begin, ref_temp[i].te - chr_begin, ref_temp[i].key);
-	}
-#endif	
-
 	//adjust anchors, if two anchor are in the sam interval of exon, then merge the two anchor
 	//and remove anchor whose key = -1;
 	uint32_t anchor_n_new = 0;
@@ -3761,13 +2621,11 @@ MULFIND:
 		break;
 	}
     //remove the first anchor if not satified condition
-    // if ((i < anchor_n) && (ref_temp[i].key - ref_temp[anchor_n_new - 1].key > 5) && (query_pos[anchor_n_new - 1].qe - query_pos[anchor_n_new - 1].qs < seed_k_t + 8))
 	if ((i < anchor_n) && check_filter(ref_pos[i].ts, ref_pos[anchor_n_new - 1].ts, ref_temp[i].key, ref_temp[anchor_n_new - 1].key, query_pos[anchor_n_new - 1].qe - query_pos[anchor_n_new - 1].qs))
     {
         anchor_n_new = 0;
         goto MULFIND;
     }
-	//uint8_t shift = seed_k_t/2 - 2; //
 
 	while(i < anchor_n)
 	{
@@ -3784,7 +2642,7 @@ MULFIND:
 			//if the gap less than thre, then merge, else seperate, method 2
             tlen = ref_pos[i].ts - ref_pos[i - 1].te;
             qlen = query_pos[i].qs - query_pos[i - 1].qe;
-            thre = tlen*0.134*0.36*2;
+            thre = tlen*opt->error_overall*opt->error_ins*2;
             if ((abs)(tlen - qlen) > thre) //judge whether can be merge by tlen - qlen < thre
             {
                 break;
@@ -3794,7 +2652,6 @@ MULFIND:
 
 		int a = (int)(query_pos[index].qs - query_pos[anchor_n_new - 1].qe);
 		int b = (int)(ref_pos[index].ts - ref_pos[anchor_n_new - 1].te);
-		// if (query_pos[index].qs <= query_pos[anchor_n_new - 1].qe || ref_pos[index].ts <= ref_pos[anchor_n_new - 1].te) //have overlap
 		if (a <= 0 || b <= 0)
 		{
             uint8_t shift;
@@ -3832,101 +2689,8 @@ MULFIND:
 	if((anchor_n_new > 1) && check_filter(ref_pos[anchor_n_new - 1].te, ref_pos[anchor_n_new - 2].te, ref_temp[anchor_n_new - 1].key, ref_temp[anchor_n_new - 2].key, query_pos[anchor_n_new - 1].qe - query_pos[anchor_n_new - 1].qs))
         anchor_n_new--;
 	
-#ifdef PRINT
-	fprintf(stderr, "merge anchors in the sam interval of exon-----------------------, anchor_n_new = %u\n", anchor_n_new);
-	for ( i = 0; i < anchor_n_new; ++i)
-	{
-		fprintf(stderr, "%u-%u-%u-%u-%u-%u-%d\n", query_pos[i].qs, query_pos[i].qe, ref_pos[i].ts, ref_pos[i].te, ref_temp[i].ts, ref_temp[i].te, ref_temp[i].key);
-	}
-#endif
 	*new_n = anchor_n_new;
 	return 1;
-}
-
-static int align_core2(void *km, uint32_t read_line,  uint8_t strand, uint8_t *qseq0[2], uint8_t *qual0[2], _aln_t *aln, REF_t *ref_pos, QUERY_t *query_pos, uint32_t anchor_n, param_map *opt, ksw_extz_t *ez)
-{
-	uint32_t i, j;
-	uint8_t which_strand;
-	
-	seq_io *s_io = &seqio[read_line];
-	uint32_t seqlen = s_io->read_length;
-	char *read = s_io->read_seq;
-    char *seqname = s_io->name;
-	int chr_n = 0;
-
-	if (anchor_n > opt->max_exon_num_per_read)
-		return 1;
-
-	reset_aln_t(aln);
-#ifdef PRINT
-	fprintf(stderr, "before check anchor\n");
-	for ( i = 0; i < anchor_n; ++i)
-	{
-		fprintf(stderr, "%u-%u-%u-%u\n", query_pos[i].qs, query_pos[i].qe, ref_pos[i].ts, ref_pos[i].te);
-	}
-#endif	
-
-	//merge and filter first/last wrong anchor
-	int start = 0;
-	int end = anchor_n - 1;
-
-	if (anchor_n >= 2)
-	{
-		if (check_filter(ref_pos[1].ts, ref_pos[0].ts, 0, 0, seed_k_t + 9))
-			start = 1;
-		if (check_filter(ref_pos[anchor_n - 2].te, ref_pos[anchor_n - 1].te, 0, 0, seed_k_t + 9))
-			end = anchor_n - 2;
-	}
-	if (start > end)
-		return 1;
-
-	uint32_t tmp_n = 0;
-	for (i = start; i <= end; ++i)
-	{
-		query_pos[tmp_n].qs = query_pos[i].qs;
-		query_pos[tmp_n].qe = query_pos[i].qe;
-		ref_pos[tmp_n].ts = ref_pos[i].ts;
-		ref_pos[tmp_n].te = ref_pos[i].te;
-		tmp_n++;
-	}
-	anchor_n = tmp_n;
-    i = 0;
-	while(i < anchor_n - 1)
-	{
-		i++;
-		if (query_pos[i].qs <= query_pos[i - 1].qe) //have overlap
-		{
-            uint8_t shift = query_pos[i - 1].qe - query_pos[i].qs + 1;
-			query_pos[i - 1].qe -= shift;
-			ref_pos[i - 1].te -= shift;
-
-			query_pos[i].qs += shift;
-			ref_pos[i].ts += shift;
-		}
-	}
-#ifdef PRINT
-	fprintf(stderr, "after check anchor\n");
-	for ( i = 0; i < anchor_n; ++i)
-	{
-		fprintf(stderr, "%u-%u-%u-%u\n", query_pos[i].qs, query_pos[i].qe, ref_pos[i].ts, ref_pos[i].te);
-	}
-#endif
-    //+
-    align_core_secondary(km, seqlen, qseq0, qual0, &aln[0], opt, ez, ref_pos, query_pos, &chr_n, anchor_n, strand, MM_F_SPLICE_FOR, seqname);
-    //-
-    align_core_secondary(km, seqlen, qseq0, qual0, &aln[1], opt, ez, ref_pos, query_pos, &chr_n, anchor_n, strand, MM_F_SPLICE_REV, seqname);
-	
-    which_strand = (aln[0].dp_score < aln[1].dp_score)? 1:0;
-    // if (aln[which_strand].dp_score <= 0)
-    if (aln[which_strand].dp_score <= seed_k_t*opt->match_D)
-        return 1;
-
-    aln[which_strand].chr_n = chr_n;
-    uint32_t chr_begin = chr_end_n[chr_n - 1];
-    // fprintf(stderr, "chr_n = %d, _1_base = %d, chr_begin = %d\n", chr_n, aln[which_strand]._1_based_pos, chr_begin);
-    aln[which_strand]._1_based_pos = aln[which_strand]._1_based_pos - chr_begin + 1 + 1; // change to 1_based pos
-
-	return 0;
 }
 
 static int align_core(void *km, TARGET_t *anchor_map2ref, uint32_t read_line, uint8_t tid, uint8_t strand, uint8_t *qseq0[2], uint8_t *qual0[2], _aln_t *aln, uint32_t anchor_n, int primary, param_map *opt, ksw_extz_t *ez, ksw_extz_t *ez2)
@@ -3936,17 +2700,9 @@ static int align_core(void *km, TARGET_t *anchor_map2ref, uint32_t read_line, ui
 	reset_aln_t(aln);
 	REF_t *ref_pos = REF_pos[tid];
 	QUERY_t *query_pos = QUERY_pos[tid];
-	double ts = clock();
-	int signal = find_merge_anchor(anchor_map2ref, ref_temp, ref_pos, query_pos, anchor_n, primary, &anchor_n_new);
-	search_time[tid] += (double)(clock() - ts)/CLOCKS_PER_SEC;
+	int signal = find_merge_anchor(anchor_map2ref, ref_temp, ref_pos, query_pos, anchor_n, primary, &anchor_n_new, opt);
 
-	if (signal == 0) //secondary anchor list
-	{
-		free(ref_temp);
-		int t = align_core2(km, read_line, strand, qseq0, qual0, aln, ref_pos, query_pos, anchor_n, opt, ez);
-		return t;
-	}
-	else if ((anchor_n_new > 0) && (anchor_n_new < opt->max_exon_num_per_read))
+	if ((anchor_n_new > 0) && (anchor_n_new < opt->max_exon_num_per_read))
 	{
 		uint32_t i, j;
 		uint8_t which_strand;
@@ -3970,7 +2726,6 @@ static int align_core(void *km, TARGET_t *anchor_map2ref, uint32_t read_line, ui
 		int key_total = key_r - key_l + 1;
 		TARGET_t *target_tmp_FOR = (TARGET_t* )malloc(key_total * sizeof(TARGET_t));
 		TARGET_t *target_tmp_REV = (TARGET_t* )malloc(key_total * sizeof(TARGET_t));
-		// fprintf(stderr, "%d-%d-%d\n", anchor_map2ref[key1].strand, anchor_map2ref[key2].strand, anchor_map2ref[(key2+key1)>>1].strand);
 		if (anchor_map2ref[key1].strand == 0 && anchor_map2ref[key2].strand == 0 && anchor_map2ref[(key2+key1)>>1].strand == 0)
 		{
 			// fprintf(stderr, "froward\n");
@@ -3987,7 +2742,7 @@ static int align_core(void *km, TARGET_t *anchor_map2ref, uint32_t read_line, ui
 				ref_temp[i].key = key;
 			}
 
-			align_core_primary(km, seqlen, target_tmp_FOR, qseq0, qual0, &aln[0], opt, ez, ez2, ref_pos, ref_temp, query_pos, &chr_n, anchor_n_new, strand, tid, key_total, MM_F_SPLICE_FOR, left_bound, right_bound, seqname);
+			align_core_primary(km, seqlen, target_tmp_FOR, qseq0, qual0, &aln[0], opt, ez, ez2, ref_pos, ref_temp, query_pos, &chr_n, anchor_n_new, strand, tid, key_total, MM_F_SPLICE_FOR, left_bound, right_bound);
 			
 			if (aln[0].dp_score <= 0)
 			{
@@ -4021,7 +2776,7 @@ static int align_core(void *km, TARGET_t *anchor_map2ref, uint32_t read_line, ui
 				ref_temp[i].te = target_tmp_REV[key].te;
 				ref_temp[i].key = key;
 			}
-			align_core_primary(km, seqlen, target_tmp_REV, qseq0, qual0, &aln[1], opt, ez, ez2, ref_pos, ref_temp, query_pos, &chr_n, anchor_n_new, strand, tid, key_total, MM_F_SPLICE_REV, left_bound, right_bound, seqname);
+			align_core_primary(km, seqlen, target_tmp_REV, qseq0, qual0, &aln[1], opt, ez, ez2, ref_pos, ref_temp, query_pos, &chr_n, anchor_n_new, strand, tid, key_total, MM_F_SPLICE_REV, left_bound, right_bound);
 			
 			if (aln[1].dp_score <= 0)
 			{
@@ -4047,17 +2802,7 @@ static int align_core(void *km, TARGET_t *anchor_map2ref, uint32_t read_line, ui
 				target_tmp_FOR[i - key_l].ts = EXON_T[i].ts_f;
 				target_tmp_FOR[i - key_l].te = EXON_T[i].te_f;
 			}
-#ifdef PRINT
-			fprintf(stderr, "splice detected from forward!, key_l = %d, key_r = %d\n", key_l, key_r);
 
-			uint32_t chr_begin;
-			chromosome_judge(target_tmp_FOR[key1 - key_l].ts, &chr_begin);
-            chr_begin = 0;
-			for(i = key_l; i <= key_r; ++i)
-			{
-				fprintf(stderr, "%u-%u\n", target_tmp_FOR[i - key_l].ts - chr_begin, target_tmp_FOR[i - key_l].te - chr_begin);
-			}
-#endif
 			for (i = 0; i < anchor_n_new; ++i)
 			{
 				key = ref_temp[i].key - key_l;
@@ -4065,7 +2810,7 @@ static int align_core(void *km, TARGET_t *anchor_map2ref, uint32_t read_line, ui
 				ref_temp[i].te = target_tmp_FOR[key].te;
 				ref_temp[i].key = key;
 			}
-			int a = align_core_primary(km, seqlen, target_tmp_FOR, qseq0, qual0, &aln[0], opt, ez, ez2, ref_pos, ref_temp, query_pos, &chr_n, anchor_n_new, strand, tid, key_total, MM_F_SPLICE_FOR, left_bound, right_bound, seqname);
+			align_core_primary(km, seqlen, target_tmp_FOR, qseq0, qual0, &aln[0], opt, ez, ez2, ref_pos, ref_temp, query_pos, &chr_n, anchor_n_new, strand, tid, key_total, MM_F_SPLICE_FOR, left_bound, right_bound);
 
 			//reverse
 			for(i = key_l; i <= key_r; ++i)
@@ -4073,21 +2818,14 @@ static int align_core(void *km, TARGET_t *anchor_map2ref, uint32_t read_line, ui
 				target_tmp_REV[i - key_l].ts = EXON_T[i].ts_r;
 				target_tmp_REV[i - key_l].te = EXON_T[i].te_r;
 			}
-#ifdef PRINT
-			fprintf(stderr, "splice detected frm reverse!\n");
 
-			for(i = key_l; i <= key_r; ++i)
-			{
-				fprintf(stderr, "%u-%u\n", target_tmp_REV[i - key_l].ts - chr_begin, target_tmp_REV[i - key_l].te - chr_begin);
-			}
-#endif
 			for (i = 0; i < anchor_n_new; ++i)
 			{
 				ref_temp[i].ts = target_tmp_REV[ref_temp[i].key].ts;
 				ref_temp[i].te = target_tmp_REV[ref_temp[i].key].te;
 			}
 
-			int b = align_core_primary(km, seqlen, target_tmp_REV, qseq0, qual0, &aln[1], opt, ez, ez2, ref_pos, ref_temp, query_pos, &chr_n, anchor_n_new, strand, tid, key_total, MM_F_SPLICE_REV, left_bound, right_bound, seqname);
+			align_core_primary(km, seqlen, target_tmp_REV, qseq0, qual0, &aln[1], opt, ez, ez2, ref_pos, ref_temp, query_pos, &chr_n, anchor_n_new, strand, tid, key_total, MM_F_SPLICE_REV, left_bound, right_bound);
 
 			which_strand = (aln[0].dp_score < aln[1].dp_score)? 1:0;
 			if (aln[which_strand].dp_score <= 0)
@@ -4432,8 +3170,6 @@ static void load_query_from_1pass(void *km, TARGET_t * anchor_map2ref, FILE *fp_
 			if (qseq0[0][i] >= 4)
 				qseq0[0][i] = rand()%4;
 			qseq0[1][seqlen - 1 - i] = 3 - qseq0[0][i];
-
-			// qseq0[1][seqlen - 1 - i] = qseq0[0][i] < 4? 3 - qseq0[0][i] : rand()%4; //reverse
 		}
 		if (opt->with_qual && s_io->qual) 
 		{
@@ -4445,9 +3181,7 @@ static void load_query_from_1pass(void *km, TARGET_t * anchor_map2ref, FILE *fp_
 		max_dp_index = 0;
 		max_dp_strand = 0;
 		fscanf(fp_tff, "%u\t", &multi_n);
-#ifdef PRINT
-		fprintf(stderr, "here process read name is %s, qlen = %d\n", seqio[seqi].name, seqio[seqi].read_length);
-#endif
+
 		if (multi_n == 0)
 		{
 			//unmapped read
@@ -4466,37 +3200,33 @@ static void load_query_from_1pass(void *km, TARGET_t * anchor_map2ref, FILE *fp_
 			{
 				fscanf(fp_tff, "%u\t%u\t%u\t%u\t", &REF_pos[tid][i].ts, &REF_pos[tid][i].te, &QUERY_pos[tid][i].qs, &QUERY_pos[tid][i].qe);
 			}
-#ifdef PRINT
-			if (seqi == TEMP_INDEX)
-#endif
+
+			return_sig = align_core(km, anchor_map2ref, seqi, 0, strand, qseq0, qual0, aln[j], anchor_n, primary, opt, ez, ez2);
+			if (return_sig)
 			{
-				return_sig = align_core(km, anchor_map2ref, seqi, 0, strand, qseq0, qual0, aln[j], anchor_n, primary, opt, ez, ez2);
-				if (return_sig)
+				aln[j][0].flag = 4;
+				aln[j][1].flag = 4;
+			}
+			else
+			{
+				real_multi_n++;
+				which_strand = (aln[j][0].dp_score < aln[j][1].dp_score)? 1:0;
+				aln[j][which_strand].flag = strand? 16:0;
+				int dp = aln[j][which_strand].dp_max;
+				if (dp > max_dp)
 				{
-					aln[j][0].flag = 4;
-					aln[j][1].flag = 4;
+					max_dp = dp;
+					max_dp_index = j;
+					max_dp_strand = which_strand;
 				}
-				else
+				else if (dp == max_dp)
 				{
-					real_multi_n++;
-					which_strand = (aln[j][0].dp_score < aln[j][1].dp_score)? 1:0;
-					aln[j][which_strand].flag = strand? 16:0;
-					int dp = aln[j][which_strand].dp_max;
-					if (dp > max_dp)
+					int NM = aln[j][which_strand].blen - aln[j][which_strand].mlen + aln[j][which_strand].n_ambi;
+					int NM2 = aln[max_dp_index][max_dp_strand].blen - aln[max_dp_index][max_dp_strand].mlen + aln[max_dp_index][max_dp_strand].n_ambi;
+					if (NM < NM2)
 					{
-						max_dp = dp;
 						max_dp_index = j;
 						max_dp_strand = which_strand;
-					}
-					else if (dp == max_dp)
-					{
-						int NM = aln[j][which_strand].blen - aln[j][which_strand].mlen + aln[j][which_strand].n_ambi;
-						int NM2 = aln[max_dp_index][max_dp_strand].blen - aln[max_dp_index][max_dp_strand].mlen + aln[max_dp_index][max_dp_strand].n_ambi;
-						if (NM < NM2)
-						{
-							max_dp_index = j;
-							max_dp_strand = which_strand;
-						}
 					}
 				}
 			}				
@@ -4511,55 +3241,49 @@ static void load_query_from_1pass(void *km, TARGET_t * anchor_map2ref, FILE *fp_
 		}
 		//find the best alignment
 		//write the best alignment to sam file
-#ifdef PRINT
-		if (seqi == TEMP_INDEX)
-#endif
+		if (real_multi_n > 0)
 		{
-			if (real_multi_n > 0)
+			seqio[seqi].mapable = 1;
+			//record alignment result for print SAM
+			uint8_t m = 0;
+			seqio[seqi].aln = (_aln_t* )calloc(multi_n, sizeof(_aln_t));
+			copy_aln_value(&seqio[seqi].aln[m++], &aln[max_dp_index][max_dp_strand], seqi);
+			int32_t tmp_score = 0;
+			for(j = 0; j < multi_n; ++j)
 			{
-				seqio[seqi].mapable = 1;
-				//record alignment result for print SAM
-				uint8_t m = 0;
-				seqio[seqi].aln = (_aln_t* )calloc(multi_n, sizeof(_aln_t));
-				copy_aln_value(&seqio[seqi].aln[m++], &aln[max_dp_index][max_dp_strand], seqi);
-				int32_t tmp_score = 0;
-				for(j = 0; j < multi_n; ++j)
+				if ((j != max_dp_index) && ((aln[j][0].flag != 4) || (aln[j][1].flag != 4)))
 				{
-					if ((j != max_dp_index) && ((aln[j][0].flag != 4) || (aln[j][1].flag != 4)))
-					{
-						which_strand = (aln[j][0].dp_score < aln[j][1].dp_score)? 1:0;
-						if (tmp_score < aln[j][which_strand].dp_max)
-							tmp_score = aln[j][which_strand].dp_max;
-						aln[j][which_strand].flag |= 0x100;
-						copy_aln_value(&seqio[seqi].aln[m++], &aln[j][which_strand], seqi);
-					}
+					which_strand = (aln[j][0].dp_score < aln[j][1].dp_score)? 1:0;
+					if (tmp_score < aln[j][which_strand].dp_max)
+						tmp_score = aln[j][which_strand].dp_max;
+					aln[j][which_strand].flag |= 0x100;
+					copy_aln_value(&seqio[seqi].aln[m++], &aln[j][which_strand], seqi);
 				}
-				assert(m==real_multi_n);
-				seqio[seqi].multi_n = m;
-				seqio[seqi].mapable = 1;
-				seqio[seqi].mapq = 60 * (aln[max_dp_index][max_dp_strand].dp_max - tmp_score)/aln[max_dp_index][max_dp_strand].dp_max;
+			}
+			assert(m==real_multi_n);
+			seqio[seqi].multi_n = m;
+			seqio[seqi].mapable = 1;
+			seqio[seqi].mapq = 60 * (aln[max_dp_index][max_dp_strand].dp_max - tmp_score)/aln[max_dp_index][max_dp_strand].dp_max;
 
-				//reverse read sequence according strand
-				if (seqio[seqi].aln[0].flag & 16)
+			//reverse read sequence according strand
+			if (seqio[seqi].aln[0].flag & 16)
+			{
+				for(j = 0; j < seqlen; ++j)
 				{
-					for(j = 0; j < seqlen; ++j)
-					{
-						seqio[seqi].read_seq[j] = Dna5Tochar[qseq0[1][j]];
-					}
+					seqio[seqi].read_seq[j] = Dna5Tochar[qseq0[1][j]];
 				}
 			}
-			else
-			{
-				seqio[seqi].mapable = 0;
-				seqio[seqi].aln = NULL;
-                seqio[seqi].multi_n = 0;
-			}
+		}
+		else
+		{
+			seqio[seqi].mapable = 0;
+			seqio[seqi].aln = NULL;
+			seqio[seqi].multi_n = 0;
 		}			
 		seqi++;
 	}
 
 	kfree(km, qseq0[0]);
-	// if (qual0[0]) kfree(km, qual0[0]);
 	if (opt->with_qual) kfree(km, qual0[0]);
 }
 
@@ -4603,7 +3327,6 @@ static int aln_main(uint32_t read_line, thread_2pass_t *aux, dpSkeleton_t *dp_sk
 			qseq0[0][i] = rand()%4;
 		
 		qseq0[1][seqlen - 1 - i] = 3 - qseq0[0][i];
-        // qseq0[1][seqlen - 1 - i] = qseq0[0][i] < 4? 3 - qseq0[0][i] : rand()%4; //reverse
     }
     if (s_io->qual && aux->map->with_qual) 
     {
@@ -4621,7 +3344,6 @@ static int aln_main(uint32_t read_line, thread_2pass_t *aux, dpSkeleton_t *dp_sk
 		aln[i][0].cigar = (uint32_t* )calloc(seqlen<<1, 4);
 		aln[i][1].cigar = (uint32_t* )calloc(seqlen<<1, 4);
 	}
-	// fprintf(stderr, "here process read name is %s, qlen = %d\n", seqio[read_line].name, seqio[read_line].read_length);
 	for(i = 0; i < multi_n; ++i)
 	{
 		anchor_n = dp_skeleton->point[i].anchor_n;
@@ -4679,7 +3401,6 @@ static int aln_main(uint32_t read_line, thread_2pass_t *aux, dpSkeleton_t *dp_sk
 	//write the best alignment to sam file
 	if (real_multi_n > 0)
 	{
-		// seqio[read_line].mapable = 1;
 		//record alignment result for print SAM
 		uint8_t m = 0;
 		seqio[read_line].aln = (_aln_t* )calloc(multi_n, sizeof(_aln_t));
@@ -4727,7 +3448,6 @@ FREE:
 	if (aln != NULL)	free(aln);
 
 	kfree(km, qseq0[0]);
-	// if (qual0[0]) kfree(km, qual0[0]);
 	if (s_io->qual && aux->map->with_qual) kfree(km, qual0[0]);
 
 	return 0;
@@ -4738,15 +3458,12 @@ static void *aln_main_thread(void *aux)
 	thread_2pass_t *d = (thread_2pass_t* )aux;
 	int _read_lines;
 
-	//fprintf(stderr, "I am thread %d\n", d->tid);
-
 	while(1)
 	{
 		pthread_rwlock_wrlock(&RWLOCK);
 		_read_lines = THREAD_READ_I++;
 		pthread_rwlock_unlock(&RWLOCK);
 
-		// fprintf(stderr, "read_lines = %u\n", _read_lines);
 		if (_read_lines < d->seqn)
 		{
 			aln_main(_read_lines, d, &d->dp_skeleton[_read_lines]);
@@ -4756,7 +3473,7 @@ static void *aln_main_thread(void *aux)
 	return 0;
 }
 
-void load_fasta_2pass(uint32_t map2ref_cnt, param_map *opt, char *read_fastq)
+void load_fasta_2pass(uint32_t map2ref_cnt, param_map *opt, char *read_fastq, int *Total_mapped_reads)
 {
 	uint32_t read_in = opt->batch_size;
 	uint32_t seqii = read_in;
@@ -4764,13 +3481,13 @@ void load_fasta_2pass(uint32_t map2ref_cnt, param_map *opt, char *read_fastq)
 	uint32_t r_i, r_ii;
 	bseq_file_t *bf;  //can set to extern
 	void *km = 0;
-	hash_kmer = opt->hash_kmer;  //hash_kmer == 1/error_rate   if hash_kmer is too large, may filte many short exons
+	hash_kmer = opt->hash_kmer;
 	e_shift = opt->e_shift;
 	clock_t a = clock();
+
 #ifdef PRINT
 	thread_n = 1;
 #endif
-	//thread_n = 1;
 	initHashTable(hash_kmer);
 
 #ifdef HAVE_KALLOC
@@ -4779,15 +3496,15 @@ void load_fasta_2pass(uint32_t map2ref_cnt, param_map *opt, char *read_fastq)
 	bf = bseq_open(read_fastq);
 	if(bf == 0)
     {
-        fprintf(stderr, "wrong input file route or name: %s \n", read_fastq);
+        fprintf(stderr, "[Wrong] Wrong input file route or name: %s \n", read_fastq);
         exit(1);
     }
 
 	FILE* fp_tff = fopen(temp_anchor_dir, "r");
 	if (fp_tff == NULL)
 	{
-		fprintf(stderr, "open file %s wrong!!!\n", temp_anchor_dir);
-        fprintf(stderr, "The error may caused by ttwo program was running in the same time, but you didn't specify the temp file name!\n Please cheak or see more detailed from usage.\n");
+		fprintf(stderr, "[Wrong] Open the temporary file %s failed!!!\n", temp_anchor_dir);
+        fprintf(stderr, "[Warring] The error may caused by two deSALT program were running in the same time, but you didn't specify the temporary file path (-f)!\n Please cheak or see more detailed from usage.\n");
 		exit(0);
 	}
 
@@ -4804,20 +3521,21 @@ void load_fasta_2pass(uint32_t map2ref_cnt, param_map *opt, char *read_fastq)
 		QUERY_pos[r_i] = (QUERY_t* )malloc(max_exon_num_per_read*sizeof(QUERY_t));
 	}
 	
-	//load anchor generated from all queries from 1-pass
 	TARGET_t *anchor_map2ref = (TARGET_t* )malloc(map2ref_cnt*sizeof(TARGET_t));
 
+	fprintf(stderr, "[Phase-INFO] Exons inference by skeletons of all reads\n");
 	if (opt->with_gtf)
 	{
-		fprintf(stderr, "process with gtf file\n");
+		fprintf(stderr, "[Phase-INFO] Loading GTF annotations\n");
+		// fprintf(stderr, "[Phase-INFO] Implement alignment process with the help of gene annotations(GTF)\n");
 		merge_anchor_cnt = get_annotations(opt, anchor_map2ref, map2ref_cnt);
-        int q = 0;
-        for(r_i = 0; r_i < merge_anchor_cnt; ++r_i)
-		{
-			if (anchor_map2ref[r_i].strand != 3)
-				q += 1;
-		}
-        printf("[INFO] after compare GTF file, make sure total %d exon region strand\n", q);
+        // int q = 0;
+        // for(r_i = 0; r_i < merge_anchor_cnt; ++r_i)
+		// {
+		// 	if (anchor_map2ref[r_i].strand != 3)
+		// 		q += 1;
+		// }
+        // fprintf(stderr, "[INFO] after compare GTF file, make sure total %d exon region strand\n", q);
 	}
 	else{
 		merge_anchor_cnt = load_anchor(anchor_map2ref, map2ref_cnt);
@@ -4827,7 +3545,8 @@ void load_fasta_2pass(uint32_t map2ref_cnt, param_map *opt, char *read_fastq)
 			anchor_map2ref[r_i].cov = 0;
 		}
 	}
-	fprintf(stderr, "[INFO] Mergeing and filtering exon region count: %d, readlen_max = %d, batch_size = %d\n", merge_anchor_cnt, readlen_max, read_in);
+
+	fprintf(stderr, "[Phase-INFO] Inferring total %d isolated regions (pseudo-exons) after merging and filtering\n", merge_anchor_cnt);
 
 	strand_arr = (uint8_t** )calloc(thread_n, sizeof(uint8_t* ));
 	for (r_i = 0; r_i < thread_n; ++r_i)
@@ -4838,6 +3557,7 @@ void load_fasta_2pass(uint32_t map2ref_cnt, param_map *opt, char *read_fastq)
 
 	if (merge_anchor_cnt > 0)
 	{
+		fprintf(stderr, "[Phase-INFO] Refining pseudo-exons by scoring matrix\n");
 		EXON_T = (EXON_t* )malloc(merge_anchor_cnt*sizeof(EXON_t));
 		//judge the splice junction according to scoring matrix
 		if (opt->read_type == 3)
@@ -4851,12 +3571,7 @@ void load_fasta_2pass(uint32_t map2ref_cnt, param_map *opt, char *read_fastq)
 			splice_site_judge2(anchor_map2ref, EXON_T, merge_anchor_cnt, splice_offset);
 	}
 
-	search_time = (double *)calloc(thread_n, sizeof(double));
-	memset(search_time, 0.0, thread_n*sizeof(double));
-    hash_time = (double *)calloc(thread_n, sizeof(double));
-    memset(hash_time, 0.0, thread_n*sizeof(double));
 	int time = 0;
-	
 	pthread_rwlock_init(&RWLOCK, NULL);
 	thread_2pass_t* aux;
 	aux = (thread_2pass_t* )calloc(thread_n, sizeof(thread_2pass_t));
@@ -4871,12 +3586,12 @@ void load_fasta_2pass(uint32_t map2ref_cnt, param_map *opt, char *read_fastq)
 #endif
 	} 
 
-	// seqii = 0;
+	double t_s, t_e;
 	while(seqii == read_in)
 	{
-		printf("[INFO] the %d loop...\n", time);
-		// load fasta
+		t_s = clock();
 		seqii = bseq_read_2pass(bf, read_in, seqio);
+		fprintf(stderr, "[Loop-ProcessReads] The %dst loop of refined alignment procedure with %d reads......\n", time, seqii);
 
 		THREAD_READ_I = 0;
 		if (thread_n <= 1)
@@ -4962,11 +3677,8 @@ void load_fasta_2pass(uint32_t map2ref_cnt, param_map *opt, char *read_fastq)
 				int res = pthread_create(&tid[r_i], &attr, aln_main_thread, aux + r_i);
 				if(res != 0)
 				{
-					fprintf(stderr, "create pthread error");
+					fprintf(stderr, "[Wrong] Create pthread error\n");
 					exit(1);
-				}
-				else{
-					//fprintf(stderr, "thread %d have create\n", r_i);
 				}
 			}
 			for(r_i = 0; r_i < thread_n; ++r_i)	pthread_join(tid[r_i], 0);
@@ -4982,14 +3694,6 @@ void load_fasta_2pass(uint32_t map2ref_cnt, param_map *opt, char *read_fastq)
 			if (dp_skeleton != NULL)	free(dp_skeleton);
 		}
 
-		for(r_i = 0; r_i < thread_n; ++r_i)
-		{
-			binary_search_time += search_time[r_i];
-			search_time[r_i] = 0.0;
-
-            total_hash_time += hash_time[r_i];
-            hash_time[r_i] = 0.0;
-		}
 		//update the information of exon strands
 		int forward = 0;
 		int reverse = 0;
@@ -5027,11 +3731,12 @@ void load_fasta_2pass(uint32_t map2ref_cnt, param_map *opt, char *read_fastq)
 			if (anchor_map2ref[r_i].strand != 3)
 				change += 1;
 		}
-        printf("[INFO] Aligned %d reads to the reference, and make sure total %d exon region strand\n", seqii, change);
-		
-
+		t_e = clock();
 		//output SAM
-		ff_print_sam (seqio, seqii, opt);
+		int mm = ff_print_sam (seqio, seqii, opt);
+		*Total_mapped_reads += mm;
+        fprintf(stderr, "[Loop-ProcessReads] Aligned %d reads to genome, and confirmed total %d exons' strand in %f seconds\n", mm, change, (double)(t_e - t_s)/CLOCKS_PER_SEC);	
+
 
 		for(r_i = 0; r_i < seqii; ++r_i)
 		{
@@ -5120,10 +3825,6 @@ void load_fasta_2pass(uint32_t map2ref_cnt, param_map *opt, char *read_fastq)
 		if (seqio[r_i].name != NULL)	free(seqio[r_i].name);
 	}
 	if(seqio != NULL)	free(seqio);
-	free(search_time);
-    free(hash_time);
-
-	fprintf(stderr, "binary query time %f, hash time %f\n", binary_search_time, total_hash_time);
 
 	freeHashTable();
 #ifdef HAVE_KALLOC

@@ -4,14 +4,6 @@
 
 #define UNPIPATH_OFF_K20
 
-
-//binary search offset
-#ifdef UNPIPATH_OFF_K20
-int64_t binsearch_offset64(uint32_t x, uint32_t v[], int64_t n, uint64_t offset);
-#else
-int64_t binsearch_offset(uint32_t x, uint32_t v[], int64_t n, uint32_t offset);
-#endif
-
 #ifdef UNPIPATH_OFF_K20
 int multi_binsearch_offset64(uint32_t x, uint32_t v[], int64_t n, uint64_t offset, int64_t seed_binary[], int8_t k_r);
 #else
