@@ -11,6 +11,7 @@ import cal_background
 
 # To enable importing from samscripts submodulew
 SCRIPT_PATH = os.path.dirname(os.path.realpath(__file__))
+SCRIPT_PATH = os.path.abspath(os.path.join(SCRIPT_PATH, ".."))
 sys.path.append(os.path.join(SCRIPT_PATH, 'samscripts/src'))
 import Annotation_formats
 import part_cal
@@ -87,10 +88,8 @@ class Static:
         self.Total_aligned_exons = 0
         self.Total_aligned_bases = 0
         self.ExR80 = 0
-        self.ExR90 = 0
         self.ExR100 = 0
         self.ExA80 = 0
-        self.ExA90 = 0
         self.ExA100 = 0
         self.Hit100 = 0
         self.Hit80 = 0
@@ -478,7 +477,8 @@ def processData(datafolder, resultfile, annotationfile, Array, SS_list, csv_path
         parthitmap = {(i+1):0 for i in xrange(numparts)}
 
         if getChromName(samline_list[0].rname) != getChromName(annotation.seqname):
-            pass
+            static_dict["All"].Total_aligned_reads += 1
+            part_cal.cal(static_dict,sigA, sigC, sigE, sigF, "Total_aligned_reads", 1)
         else:
             for samline in samline_list:
                 # sl_startpos = samline.pos - 1   # SAM positions are 1-based
@@ -546,12 +546,6 @@ def processData(datafolder, resultfile, annotationfile, Array, SS_list, csv_path
                 if num_recover_exons >= int(0.8 * sam_l):
                     static_dict["All"].ExA80 += 1
                     part_cal.cal(static_dict,sigA, sigC, sigE, sigF, "ExA80", 1)
-            if num_recover_exons >= int(0.9 * numparts):
-                static_dict["All"].ExR90 += 1
-                part_cal.cal(static_dict,sigA, sigC, sigE, sigF, "ExR90", 1)
-                if num_recover_exons >= int(0.9 * sam_l):
-                    static_dict["All"].ExA90 += 1
-                    part_cal.cal(static_dict,sigA, sigC, sigE, sigF, "ExA90", 1)
             static_dict["All"].Total_aligned_exons += num_recover_exons
             part_cal.cal(static_dict,sigA, sigC, sigE, sigF, "Total_aligned_exons", num_recover_exons)
             static_dict["All"].Total_aligned_reads += 1
@@ -586,8 +580,6 @@ def processData(datafolder, resultfile, annotationfile, Array, SS_list, csv_path
     static_dict["G"].Total_bases = Array.Total_level4_10_bases
     static_dict["G"].Total_expected_exons = Array.Total_level4_10_expected_exons
 
-    #print_static_dict(static_dict)
-
     with open(csv_path, "w") as fw:
         csv_write = csv.writer(fw, dialect = 'excel')
         header = [" ", resultfile]
@@ -596,10 +588,10 @@ def processData(datafolder, resultfile, annotationfile, Array, SS_list, csv_path
             level = [item, str(static_dict[item].Total_reads) + ' reads/' + str(static_dict[item].Total_bases) + ' bases/' + str(static_dict[item].Total_expected_exons) + ' exons']
             row1 = ["Aligned", round(100*static_dict[item].Total_aligned_reads/float(static_dict[item].Total_reads), 2)]
             row2 = ["bases%", round(100*static_dict[item].Total_aligned_bases/float(static_dict[item].Total_bases), 2)]
-            line = str(round(100*static_dict[item].ExR100/float(static_dict[item].Total_reads), 2)) + '/' + str(round(100*static_dict[item].ExR90/float(static_dict[item].Total_reads), 2)) + '/' + str(round(100*static_dict[item].ExR80/float(static_dict[item].Total_reads), 2))
-            row3 = ["ExR100/90/80%", line]
-            line = str(round(100*static_dict[item].ExA100/float(static_dict[item].Total_reads), 2)) + '/' + str(round(100*static_dict[item].ExA90/float(static_dict[item].Total_reads), 2)) + '/' + str(round(100*static_dict[item].ExA80/float(static_dict[item].Total_reads), 2))
-            row4 = ["ExA100/90/80%", line]
+            line = str(round(100*static_dict[item].ExR100/float(static_dict[item].Total_reads), 2)) + '/' + str(round(100*static_dict[item].ExR80/float(static_dict[item].Total_reads), 2))
+            row3 = ["ExR100/80%", line]
+            line = str(round(100*static_dict[item].ExA100/float(static_dict[item].Total_reads), 2)) + '/' + str(round(100*static_dict[item].ExA80/float(static_dict[item].Total_reads), 2))
+            row4 = ["ExA100/80%", line]
             line = str(round(100*static_dict[item].Hit100/float(static_dict[item].Total_reads), 2)) + '/' + str(round(100*static_dict[item].Hit80/float(static_dict[item].Total_reads), 2))
             row5 = ["Hit100/80%", line]
             row6 = ["Exons%", round(100*static_dict[item].Total_aligned_exons/float(static_dict[item].Total_expected_exons), 2)]
@@ -611,29 +603,20 @@ def processData(datafolder, resultfile, annotationfile, Array, SS_list, csv_path
             #csv_write.writerow(row5)
             csv_write.writerow(row6)
 
-
-    
-def print_static_dict(static_dict):
-    for item in static_dict.keys():
-        print "static item************************", item
-        print "Aligned read = %d, total read = %d" %(static_dict[item].Total_aligned_reads, static_dict[item].Total_reads)
-        print "Aligned base = %d, total base = %d" %(static_dict[item].Total_aligned_bases, static_dict[item].Total_bases)
-        print "ExR100 = %d, ExR90 = %d, ExR80 = %d" %(static_dict[item].ExR100, static_dict[item].ExR90, static_dict[item].ExR80)
-        print "ExA100 = %d, ExA90 = %d, ExA80 = %d" %(static_dict[item].ExA100, static_dict[item].ExA90, static_dict[item].ExA80)
-        print "Aligned exon = %d, total exon = %d" %(static_dict[item].Total_aligned_exons, static_dict[item].Total_expected_exons)
-
-
-
 def verbose_usage_and_exit():
-    sys.stderr.write('Process pbsim data - A tool for processing data generated by pbsim.\n')
-    sys.stderr.write('                   - Collects data generated for multiple references.\n')
-    sys.stderr.write('                   - And adjusts headers to reflect a reference of origin.\n')
+    sys.stderr.write('Simulation study evaluation - A script for evaluation of simulation data generated by pbsim.\n')
     sys.stderr.write('\n')
     sys.stderr.write('Usage:\n')
-    sys.stderr.write('\t%s [mode]\n' % sys.argv[0])
-    sys.stderr.write('\n')
-    sys.stderr.write('\tmode:\n')
-    sys.stderr.write('\t\tprocess\n')
+    sys.stderr.write('\t%s [simulationfolder] [alignmentfile] [annotationfile] [grouplist] [ss_list] [as_list] [csv_path]\n\n' %sys.argv[0])
+    sys.stderr.write('\t[simulationfolder]: the folder containing simulation datasets generated by PBSIM\n')
+    sys.stderr.write('\t[alignmentfile]: the alignment results (SAM) of simulation data by aligners\n')
+    sys.stderr.write('\t[annotationfile]: the annotations (GTF) of reference genome\n')
+    sys.stderr.write('\t[grouplist]: the groups where the simulation data were simulated with different sequencing depth by PBSIM\n')
+    sys.stderr.write('\t[ss_list]: the list of transcripts id of all single splicing isoforms\n')
+    sys.stderr.write('\t[as_list]: the list of transcripts id of all alternative splicing isoforms\n')
+    sys.stderr.write('\t[csv_path]: the results of evaluation\n')
+
+
     sys.stderr.write('\n')
     exit(0)
 

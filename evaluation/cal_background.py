@@ -6,6 +6,7 @@ import Annotation_formats
 
 # To enable importing from samscripts submodulew
 SCRIPT_PATH = os.path.dirname(os.path.realpath(__file__))
+SCRIPT_PATH = os.path.abspath(os.path.join(SCRIPT_PATH, ".."))
 sys.path.append(os.path.join(SCRIPT_PATH, 'samscripts/src'))
 
 from fastqparser import read_fastq
