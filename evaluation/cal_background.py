@@ -105,8 +105,12 @@ def processData(datafolder, annotationfile, ss_list, as_list):
                         elements = line.split()
                         maf_startpos = int(elements[2])
                         maf_length = int(elements[3])
+                        maf_reflen = int(elements[5])
 
                         # Calculating expected partial alignmetns from MAF and annotations
+                        #IMPORTANT:  if the reads were generated from an annotation on reverse strand, expected partial alignments must be reversed
+                        if annotation.strand == Annotation_formats.GFF_STRANDRV:
+                            maf_startpos = maf_reflen - maf_length - maf_startpos
 
                         # 1. Calculating the index of the first exon
                         # i - the index of exon currently being considered
