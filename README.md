@@ -100,4 +100,4 @@ Due to there is no well-studied simulator for noisy long RNA-seq reads, we used 
 The simulated datasets and description used for benchmarking are available at https://drive.google.com/drive/folders/16RpDYkdTCwOHmvoWNehnUp7nxrNt_Q7T?usp=sharing
 
 ## Contact
-For advising, bug reporting and requiring help, please contact ydwang@hit.edu.cn or 16B903057@hit.edu.cn
+For advising, bug reporting and requiring help, please contact ydwang@hit.edu.cn or ydliu@hit.edu.cn
