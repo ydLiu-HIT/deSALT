@@ -1,6 +1,7 @@
 # deSALT:
 deSALT - De Bruijn graph-based Spliced Aligner for Long Transcriptome reads
-==
+
+---
 ![deSALT](https://github.com/ydLiu-HIT/deSALT/blob/master/img/deSALT_fig.png)
 
 ## Getting started
