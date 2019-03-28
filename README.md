@@ -38,7 +38,7 @@ deSALT aln <index_route> read.fa/fq
 ```
 Algorithm options:
 
-	-t --thread           [INT]	Number of threads. [1]
+	-t --thread           [INT]	Number of threads. [4]
 	-K --index-kmer       [INT]	K-mer length of RdBG-index, the default index kmer-size of deBGA.[22]
 	-k --seeding-kmer     [INT]	K-mer length of seeding process (no long than RdBG-index). [15]
 	-a --local-hash-kmer  [INT]	K-mer length of local hash process. In order to detect spanning exons in 2-pass
@@ -46,14 +46,14 @@ Algorithm options:
 					more than 10 bp. [8]
 	-s --seed-step        [INT]	The interval of seeding. deSALT extracts kmer at every s bp. [5]
     	-B --batch-size       [INT]	The counts of reads to be processed in one loop. For occupuying less memory, 
-					deSALT take only 100000 reads into the memory every time. [100000]
+					deSALT take only 655350 reads into the memory every time. [655350]
 	-n --max-uni-pos      [INT]	Maximum allowed number of hits per seed. If one seed in unipath has more than 50
 					copies in reference genome, we will ingore the seed. [50]
 	-l --max-readlen      [INT]	Maximum allowed read length. [1000000]
 	-i --min-frag-dis     [INT]	Maximum allowed distance of two fragment can be merge. [20]
 	-I --max-intron-len   [INT]	Maximum allowed intron length. [200000]
 	-c --min-chain-score  [INT]	Minimal skeleton score(match bases minus gap penalty). [30]
-	-d --strand-diff      [INT]     The minimal difference of dp score by two strand to make sure the transcript strand. [20]
+	-d --strand-diff      [INT]     The minimal difference of dp score by two strand to make sure the transcript strand. [10]
 	-g --max-read-gap     [INT]	Maximum allowed gap in read when generating skeleton. [2000]
 	-p --secondary-ratio  [FLOAT]	Min secondary-to-primary score ratio. An alignment can be regard as a secondary
 					alignment if secondary_score / primary_score > 0.9. [0.9]
@@ -83,7 +83,7 @@ Output options:
 
 	-N --top-num-aln      [INT]    	Max allowed number of secondary alignment. [5]
 	-Q --without-qual              	Don't output base quality in SAM.
-	-f --temp-file-perfix [STR]    	Route of temporary files after the first-pass alignment. [./1pass_anchor]
+	-f --temp-file-perfix [STR]    	Route of temporary files after the first-pass alignment. [./skeletons]
 		                        If you run more than one deSALT program in the same time,
 		                        you must point out different routes of temporary files for each program!
 					If no, every deSALT program will write temporary data to the same file which
