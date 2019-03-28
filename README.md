@@ -91,7 +91,10 @@ Output options:
 	-o --output           [STR]     Output file (SAM format). [./aln.sam]
 ```
 ## Important options and examples
-
+- three different kmer length in deSALT.
+-K index-kmer: the kmer length to construct the reference de Bruijn graph index(RdBG-index), which organize the reference by unitigs. The default length is 22bp with length range from 20-28bp.
+-k seeding-kmer: a smaller kmer length than index-kmer for the seeding process. Due the high error rate of long reads (except PacBio ROI reads), large kmers are hard to locate reads in reference genomes. Based on experience, a 15-18bp seeding kmer is best which take cares the search space and enough hits for skeletons generation.
+-a local-hash-kmer: if one read has a spanning exon due to there are no seed matches between read and spanning exon in the 2-pass alignment, a extreme small kmer is needed to find matches.
 
 ## Simulation benchmarking
 In the simulation study, we simulated 36 RNA-seq long read datasets with various sequencing error rates and read lengths (refers to supplementary) to mimic the datasets from various platforms, i.e., ONT 1D reads (error rate: 25%, mean read length: 7800 bp), ONT 2D reads (error rate: 12%, mean read length: 7800 bp), PacBio subreads (error rate: 15%, mean read length: 8000 bp) and PacBio ROI reads (error rate: 2%, mean read length: 2000 bp). For each of the platforms, there are respectively 9 datasets from 3 species (human, mouse and fruitfly) and in 3 sequencing depths (4X, 10X, and 30X). All the datasets were produced by PBSim based on Ensembl gene annotations (human: GRCh38, version 94, mouse: GRCm38, version 94 and fruitfly: BDGP6, version 94).
