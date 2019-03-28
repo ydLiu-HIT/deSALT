@@ -92,8 +92,11 @@ Output options:
 ```
 ## Important options and examples
 - three different kmer length in deSALT.
+
 -K index-kmer: the kmer length to construct the reference de Bruijn graph index(RdBG-index), which organize the reference by unitigs. The default length is 22bp with length range from 20-28bp.
+
 -k seeding-kmer: a smaller kmer length than index-kmer for the seeding process. Due the high error rate of long reads (except PacBio ROI reads), large kmers are hard to locate reads in reference genomes. Based on experience, a 15-18bp seeding kmer is best which take cares the search space and enough hits for skeletons generation.
+
 -a local-hash-kmer: if one read has a spanning exon due to there are no seed matches between read and spanning exon in the 2-pass alignment, a extreme small kmer is needed to find matches.
 
 ## Simulation benchmarking
