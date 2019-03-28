@@ -99,7 +99,11 @@ Output options:
 
 -a local-hash-kmer: if one read has a spanning exon due to there are no seed matches between read and spanning exon in the 2-pass alignment, a extreme small kmer is needed to find matches.
 
-In general, `index-kmer > seeding-kmer > local_hash_kmer`. Considering that `seeding-kmer` is smaller than `index-kmer`, when we do a binary search for seeding process, the base of seeding-kmer is the perfix of index-kmer. Thus, a seeding-kmer will have at most 4<sup>(|index-kmer| - |seeding-kmer|)<sup>
+In general, `index-kmer > seeding-kmer > local_hash_kmer`. Considering that `seeding-kmer` is smaller than `index-kmer`, when we do a binary search for seeding process, the base of seeding-kmer is the perfix of index-kmer. Thus, a seeding-kmer will have at most `4<sup>(|index-kmer| - |seeding-kmer|)<sup>`. If we use a large index-kmer and a small seeding-kmer, the search space for seeding will be increased fast. Take the consider of time consumption, we give a suggestion of the corresponding index-kmer length and seeding-kmer length by the following table.
+|seeding-kmer | index-kmer|
+|------|------|
+|16|22|
+|17|22|
 
 ## Simulation benchmarking
 In the simulation study, we simulated 36 RNA-seq long read datasets with various sequencing error rates and read lengths (refers to supplementary) to mimic the datasets from various platforms, i.e., ONT 1D reads (error rate: 25%, mean read length: 7800 bp), ONT 2D reads (error rate: 12%, mean read length: 7800 bp), PacBio subreads (error rate: 15%, mean read length: 8000 bp) and PacBio ROI reads (error rate: 2%, mean read length: 2000 bp). For each of the platforms, there are respectively 9 datasets from 3 species (human, mouse and fruitfly) and in 3 sequencing depths (4X, 10X, and 30X). All the datasets were produced by PBSim based on Ensembl gene annotations (human: GRCh38, version 94, mouse: GRCm38, version 94 and fruitfly: BDGP6, version 94).
