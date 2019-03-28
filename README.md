@@ -90,7 +90,8 @@ Output options:
 					will cause crash of program in 2-pass alignment due to inconsistent temporary data.
 	-o --output           [STR]     Output file (SAM format). [./aln.sam]
 ```
-## Important options
+## Important options and examples
+
 
 ## Simulation benchmarking
 In the simulation study, we simulated 36 RNA-seq long read datasets with various sequencing error rates and read lengths (refers to supplementary) to mimic the datasets from various platforms, i.e., ONT 1D reads (error rate: 25%, mean read length: 7800 bp), ONT 2D reads (error rate: 12%, mean read length: 7800 bp), PacBio subreads (error rate: 15%, mean read length: 8000 bp) and PacBio ROI reads (error rate: 2%, mean read length: 2000 bp). For each of the platforms, there are respectively 9 datasets from 3 species (human, mouse and fruitfly) and in 3 sequencing depths (4X, 10X, and 30X). All the datasets were produced by PBSim based on Ensembl gene annotations (human: GRCh38, version 94, mouse: GRCm38, version 94 and fruitfly: BDGP6, version 94).
