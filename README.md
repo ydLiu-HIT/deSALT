@@ -11,7 +11,10 @@ deSALT - De Bruijn graph-based Spliced Aligner for Long Transcriptome reads
     ./deSALT aln index_route read.fq
 
 ## Introduction
-deSALT(de Bruijn graph-based Spliced Aligner for Long Transcriptome reads) is a novel alignment approach with faster speed and sensitive exon identification. Taking the advantages of its novel two pass alignment strategy based on de Bruijn graph-based index, efficient alignment skeleton generation, sensitive exon identification and specifically designed local alignment, deSALT is a fast and accurate RNA-seq long read alignment approach. It has ability to produce high quality full-length read alignment, which is effective to recover the exons and splicing junctions along the entire reads.
+deSALT(de Bruijn graph-based Spliced Aligner for Long Transcriptome reads) is a novel alignment approach with faster speed and sensitive exon identification. Taking the advantages of its novel two pass alignment strategy based on de Bruijn graph-based index, efficient alignment skeleton generation, sensitive exon identification and specifically designed local alignment, deSALT is a fast and accurate RNA-seq long read alignment approach. It has ability to produce high quality full-length read alignment, which is effective to recover the exons and splicing junctions along the entire reads. The workflow of deSALT is below.
+
+
+![deSALT](https://github.com/ydLiu-HIT/deSALT/blob/master/img/deSALT_pipline.png)
 
 We benchmarked deSALT with 36 simulated datasets having various read length, sequencing error rates and sequencing depth (simulation workflow links). deSALT also assessed the ability of aligners by two real RNA-seq datasets produced by Oxford Nanopore and PacBio platform. One from the well-studied human sample NA12878 by ONT technology and another from real mouse sample (SRR6238555) by SMRT technology.
 
