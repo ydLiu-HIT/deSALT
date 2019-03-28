@@ -30,11 +30,11 @@
 #define MIN_FRAG_DIS 20
 #define SECONDARY_TO_PRIMARY 0.9
 #define E_SHIFT 5
-#define STRAND_DIFF 20
+#define STRAND_DIFF 10
 #define MIN_CHAIN_SCORE 20
 #define MAX_READ_JOIN_GAP 2000
 #define BATCH_SIZE 100000
-#define TEMP_FILE_PERFIRX "1pass_anchor"
+#define TEMP_FILE_PERFIRX "./skeletons"
 #define OUTPUT "./aln.sam"
 
 #define MAX_PTHREAD 48

@@ -588,17 +588,17 @@ def processData(datafolder, resultfile, annotationfile, Array, SS_list, csv_path
             level = [item, str(static_dict[item].Total_reads) + ' reads/' + str(static_dict[item].Total_bases) + ' bases/' + str(static_dict[item].Total_expected_exons) + ' exons']
             row1 = ["Aligned", round(100*static_dict[item].Total_aligned_reads/float(static_dict[item].Total_reads), 2)]
             row2 = ["bases%", round(100*static_dict[item].Total_aligned_bases/float(static_dict[item].Total_bases), 2)]
-            line = str(round(100*static_dict[item].ExR100/float(static_dict[item].Total_reads), 2)) + '/' + str(round(100*static_dict[item].ExR80/float(static_dict[item].Total_reads), 2))
-            row3 = ["ExR100/80%", line]
+            #line = str(round(100*static_dict[item].ExR100/float(static_dict[item].Total_reads), 2)) + '/' + str(round(100*static_dict[item].ExR80/float(static_dict[item].Total_reads), 2))
+            #row3 = ["ExR100/80%", line]
             line = str(round(100*static_dict[item].ExA100/float(static_dict[item].Total_reads), 2)) + '/' + str(round(100*static_dict[item].ExA80/float(static_dict[item].Total_reads), 2))
-            row4 = ["ExA100/80%", line]
-            line = str(round(100*static_dict[item].Hit100/float(static_dict[item].Total_reads), 2)) + '/' + str(round(100*static_dict[item].Hit80/float(static_dict[item].Total_reads), 2))
-            row5 = ["Hit100/80%", line]
+            row4 = ["Read100/80%", line]
+            #line = str(round(100*static_dict[item].Hit100/float(static_dict[item].Total_reads), 2)) + '/' + str(round(100*static_dict[item].Hit80/float(static_dict[item].Total_reads), 2))
+            #row5 = ["Hit100/80%", line]
             row6 = ["Exons%", round(100*static_dict[item].Total_aligned_exons/float(static_dict[item].Total_expected_exons), 2)]
             csv_write.writerow(level)
             csv_write.writerow(row1)
             csv_write.writerow(row2)
-            csv_write.writerow(row3)
+            #csv_write.writerow(row3)
             csv_write.writerow(row4)
             #csv_write.writerow(row5)
             csv_write.writerow(row6)

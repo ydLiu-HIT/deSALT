@@ -38,6 +38,7 @@ uint32_t max_intron_length;
 int waitingLen;
 
 char *sam_path = NULL;
+char *anno_load_script = NULL;
 FILE *fp_sam = NULL;
 
 //varibale in this file
@@ -48,6 +49,7 @@ int THREAD_READ_I;
 int TOTAL_READ_COUNTs;
 char command[1024];
 uint8_t read_type = 5;
+int *read_len = NULL;
 
 static void init_map_param(param_map *opt)
 { 	
@@ -79,10 +81,10 @@ static void init_map_param(param_map *opt)
 	opt->error_del = 0.31;
 
 	opt->simulated = 0;
-	opt->secondary_ratio = 0.8;
+	opt->secondary_ratio = 0.9;
 	opt->min_chain_score = 30;
     opt->strand_diff = 20;
-    opt->batch_size = 100000;
+    opt->batch_size = 655350;
 	opt->max_read_join_gap = 2000;
 	opt->max_intron_length = SPLICDISTANCE;
 	// opt->max_sw_mat = opt->max_read_join_gap * opt->max_intron_length;
@@ -523,6 +525,7 @@ int single_seed_reduction_core_single64(uint64_t (*read_bit)[((MAX_READLEN - 1) 
     {
     	dist_1 = 0;
     }
+
 #ifdef Annoation
     fprintf(stderr, "dist_0 = %f, dist_1 = %f\n", dist_0, dist_1);
 #endif
@@ -973,6 +976,8 @@ int seeding_core(int read_seq_core, uint8_t tid, dpSkeleton_t *dp_skeleton)
 	read_length = query_info[seqi].read_length;
     
     readlen_max = (read_length > readlen_max)? read_length : readlen_max;
+    
+    read_len[tid] += read_length;
 
 	if (read_length < 30)
 	{
@@ -1061,7 +1066,6 @@ int load_fasta_1pass(bseq_file_t *bf)
 	uint32_t r_ii = 0;
 	int32_t r_iii = 0;
 	uint32_t primary;
-	//--------------------------------------------------------------	
 
 	k_r = seed_k_t - k_first_level;
     re_b = 32 - seed_k_t;
@@ -1130,12 +1134,16 @@ int load_fasta_1pass(bseq_file_t *bf)
 	{
 		fprintf(stderr, "memory wrong, uniseed\n" );
 	}
+    
+    read_len = (int* )calloc(thread_n, sizeof(int));
 
 	pthread_rwlock_init(&rwlock, NULL);
 	thread_aln_t* aux;
 	aux = (thread_aln_t* )calloc(thread_n, sizeof(thread_aln_t));
+    double t_s;
     while(seqii == read_in)
     {
+        t_s = clock();
     	seqii = bseq_read(bf, read_in, query_info);
 
         TOTAL_READ_COUNTs += seqii;
@@ -1246,6 +1254,15 @@ int load_fasta_1pass(bseq_file_t *bf)
 			}
 		}
 
+        int t_len = 0;
+        for (r_i = 0; r_i < thread_n; r_i++)
+        {
+            t_len += read_len[r_i];
+            read_len[r_i] = 0;
+        }
+        
+        fprintf(stderr, "[Skeleton-generation] Generating skeletons of %d reads, total %d bases in %f seconds\n", seqii, t_len, (double)(clock() - t_s)/CLOCKS_PER_SEC); 
+
 		//seqii = 0;
     }
 
@@ -1253,6 +1270,7 @@ int load_fasta_1pass(bseq_file_t *bf)
 	free(aux);
     // free memory
 	if (map2ref_cnt_arr != NULL)	free(map2ref_cnt_arr);
+    free(read_len);
 
 	for (r_i = 0; r_i < thread_n; ++r_i)
 	{
@@ -1588,7 +1606,7 @@ int desalt_aln(int argc, char *argv[], const char *version)
 
     if (opt->with_gtf)
     {
-		fprintf(stderr, "[Param-INFO] deSALT parameters: seed-kmer:%d\thash-kmer:%d\tthread:%d\twith GTF\n", opt->seed_k_t, opt->hash_kmer, opt->thread_n);
+		fprintf(stderr, "[Param-INFO] deSALT parameters:index-kmer:%d\tseed-kmer:%d\thash-kmer:%d\tthread:%d\tstrand_diff:%d\twith GTF\n", opt->k_t, opt->seed_k_t, opt->hash_kmer, opt->thread_n, opt->strand_diff);
         //get the folder of deSALT
         char dir[1024];
         char desalt_dir[1024];
@@ -1606,7 +1624,8 @@ int desalt_aln(int argc, char *argv[], const char *version)
 
         strcpy(path_anno_load, desalt_dir);
         strcat(path_anno_load, "Annotation_Load.py");
-
+        opt->anno_load_script = strdup(path_anno_load);
+        //strcpy(opt->anno_load_script, path_anno_load);
         if ((access(path_anno_load, F_OK)) == -1)
         {    
             fprintf(stderr, "[Wrong]: %s is not exist, please check!\n", path_anno_load);
@@ -1614,7 +1633,7 @@ int desalt_aln(int argc, char *argv[], const char *version)
         }
     }else
 	{
-		fprintf(stderr, "[Param-INFO] deSALT parameters: seed-kmer:%d\thash-kmer:%d\tthread:%d\n", opt->seed_k_t, opt->hash_kmer, opt->thread_n);
+		fprintf(stderr, "[Param-INFO] deSALT parameters:index-kmer:%d\tseed-kmer:%d\thash-kmer:%d\tthread:%d\tstrand_diff:%d\tbatch_size:%d\n", opt->k_t, opt->seed_k_t, opt->hash_kmer, opt->thread_n, opt->strand_diff, opt->batch_size);
 	}
 	
 
@@ -1632,22 +1651,17 @@ int desalt_aln(int argc, char *argv[], const char *version)
 	memset(temp_binary_pos, 0, 1024);
     if (opt->temp_file_perfix == NULL)
     {
-        opt->temp_file_perfix = strdup("1pass_anchor");
-        strcpy(temp_anchor_dir, "./");
-        strcat(temp_anchor_dir, opt->temp_file_perfix);
-        strcat(temp_anchor_dir, ".lines");
+        strcpy(temp_anchor_dir, "./skeletons.lines");
 
-        strcpy(temp_binary_pos, "./");
-        strcat(temp_binary_pos, opt->temp_file_perfix);
-    	strcat(temp_binary_pos, ".pos");
+        strcpy(temp_binary_pos, "./skeletons.pos");
     }
     else
     {
         strcpy(temp_anchor_dir, opt->temp_file_perfix);
-        strcat(temp_anchor_dir, "1pass_anchor.lines");
+        strcat(temp_anchor_dir, "skeletons.lines");
 
         strcpy(temp_binary_pos, opt->temp_file_perfix);
-        strcat(temp_binary_pos, "1pass_anchor.pos");
+        strcat(temp_binary_pos, "skeletons.pos");
     }
 
 	//variable in this file
@@ -1672,7 +1686,7 @@ int desalt_aln(int argc, char *argv[], const char *version)
     
     seed_num = 10000; // extract at moset 10000 seed every read
     uni_pos_n_max = pow(2, seed_offset - 1); //may be more smaller
-    // uni_pos_n_max = 64;
+    uni_pos_n_max = (uni_pos_n_max > 64)? 64 : uni_pos_n_max;
     new_seed_cnt = seed_num * (uni_pos_n_max + 1);
 
 	//waitlength
@@ -1738,6 +1752,7 @@ int desalt_aln(int argc, char *argv[], const char *version)
 	free(opt);
 
 	fprintf(stderr, "[Phase-INFO] Finishing Alignment\n");
+    fprintf(stderr, "[Phase-INFO] Command: %s\n", command);
 
 	return 0;
 }

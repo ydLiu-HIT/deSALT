@@ -20,7 +20,10 @@
 #include "bit_operation.h"
 #include "hash_index.h"
 #include "format.h"
+#include "read_seeding.h"
 
+// #define DEBUG
+// #define PRINT
 int THREAD_READ_I;
 pthread_rwlock_t RWLOCK;
 
@@ -353,7 +356,16 @@ static int load_anchor_with_gtf(TARGET_t *anchor_map2ref, Anno_t *annotations, u
 static uint32_t get_annotations(param_map *opt, TARGET_t *anchor_map2ref, uint32_t map2ref_cnt)
 {
 	//temp annotation out file
-	char annotation_dir[1024] = "./anno.txt";
+	char annotation_dir[1024];
+    if (opt->temp_file_perfix == NULL)
+    {
+        strcpy(annotation_dir, "./annotations.txt");
+    }
+    else
+    {
+        strcpy(annotation_dir, opt->temp_file_perfix);
+        strcat(annotation_dir, "annotations.txt");
+    }
 	/*
 	exec python script for annotation loading
 	*/
@@ -361,8 +373,8 @@ static uint32_t get_annotations(param_map *opt, TARGET_t *anchor_map2ref, uint32
 	char s[1024];
 	int ret;
 
-	sprintf(s, "./Annotation_Load.py %s %s", opt->gtf_path, annotation_dir);
-
+	sprintf(s, "%s %s %s", opt->anno_load_script, opt->gtf_path, annotation_dir);
+    
 	f = popen(s, "r");
 	ret = fread(s, 1, 1024, f);
 
@@ -467,12 +479,15 @@ static uint32_t get_annotations(param_map *opt, TARGET_t *anchor_map2ref, uint32
 	anno_range[total_range].down = i - 1;
 	total_range++;
 
-
 	//load anchor an compare to annotation
 	uint32_t final_merge_cnt = load_anchor_with_gtf(anchor_map2ref, annotation, map2ref_cnt, total_items, anno_range, total_range);
 
     if (annotation != NULL) free(annotation);
 	if (anno_range != NULL)	free(anno_range);
+    
+    char cmd[1024];
+    sprintf(cmd, "rm %s", annotation_dir);
+    system(cmd);
 
 	return final_merge_cnt;
 }
