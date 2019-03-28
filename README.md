@@ -90,8 +90,8 @@ Output options:
 					will cause crash of program in 2-pass alignment due to inconsistent temporary data.
 	-o --output           [STR]     Output file (SAM format). [./aln.sam]
 ```
-## Important options and examples
-#### three different kmer length in deSALT.
+## Important options
+#### 1. Three different kmer length in deSALT.
 
 `-K index-kmer`: the kmer length to construct the reference de Bruijn graph index(RdBG-index), which organize the reference by unitigs. The default length is 22bp with length range from 20-28bp.
 
@@ -108,6 +108,14 @@ In general, `index-kmer > seeding-kmer > local_hash_kmer`. Considering that `see
 |16|20 / 22|
 |15|20 / 22|
 |14|20|
+
+#### 2. Different specified temporary file path.
+`-f temp-file-perfix:` route of temporary files after the first-pass alignment,if users run more than one deSALT program in the same time in the same folder,users must point out different routes of temporary files for each single program! If no, every deSALT program will write temporary data to the same file which will cause crash of program in 2-pass alignment due to inconsistent temporary data. If uses run two deSALT program at the same time within the same folder, different temporary should be specified like follows:
+```
+deSAL aln -f tmp_path1 -o out1.sam index_route read1.fq   #the first deSALT program
+deSAL aln -f tmp_path2 -o out2.sam index_route read2.fq   #the second deSALT program
+```
+
 
 ## Simulation benchmarking
 In the simulation study, we simulated 36 RNA-seq long read datasets with various sequencing error rates and read lengths (refers to supplementary) to mimic the datasets from various platforms, i.e., ONT 1D reads (error rate: 25%, mean read length: 7800 bp), ONT 2D reads (error rate: 12%, mean read length: 7800 bp), PacBio subreads (error rate: 15%, mean read length: 8000 bp) and PacBio ROI reads (error rate: 2%, mean read length: 2000 bp). For each of the platforms, there are respectively 9 datasets from 3 species (human, mouse and fruitfly) and in 3 sequencing depths (4X, 10X, and 30X). All the datasets were produced by PBSim based on Ensembl gene annotations (human: GRCh38, version 94, mouse: GRCm38, version 94 and fruitfly: BDGP6, version 94).
