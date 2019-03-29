@@ -4,7 +4,7 @@ deSALT - De Bruijn graph-based Spliced Aligner for Long Transcriptome reads
 ![deSALT](https://github.com/ydLiu-HIT/deSALT/blob/master/img/deSALT_fig.png)
 
 ## Getting started
-    git clone https://github.com/ydLiu-HIT/deSALT/ (git clone https://github.com/hitbc/deSALTgit)
+    git clone https://github.com/ydLiu-HIT/deSALT.git (git clone https://github.com/hitbc/deSALT.git)
     cd deSALT/src
     make
     ./deSALT index ref.fa index_route
