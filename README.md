@@ -126,7 +126,9 @@ Due to there is no well-studied simulator for noisy long RNA-seq reads, we used 
 The simulated datasets and description used for benchmarking are available at https://drive.google.com/drive/folders/16RpDYkdTCwOHmvoWNehnUp7nxrNt_Q7T?usp=sharing
 
 ## Evaluation on simulated and real datasets
+For synthetic dataset, deSALT compares the alignment files (SAM or BAM) to the simulation data generation by PBSIM which have ground truth. In order to reveal the performance of aligners, we take the potential structure of simulation data into consideration and evaluate the results from four aspects. Detailed description of synthetic dataset evaluation can be found at https://github.com/ydLiu-HIT/deSALT/blob/master/evaluation/data_evaluation.md
 
+As for the evaluation of real datasets, we compare the alignment files to corresponding annotations. For each alignment, we find the most overlapped transcript in annotations as aligned transcript, then detect the overlapped exons and calculate the boundaries to make a decision whether the alignment is a good alignment. The details also refer to https://github.com/ydLiu-HIT/deSALT/blob/master/evaluation/data_evaluation.md.
 
 ## Contact
 For advising, bug reporting and requiring help, please contact ydwang@hit.edu.cn or ydliu@hit.edu.cn
