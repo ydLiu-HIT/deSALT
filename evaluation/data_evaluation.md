@@ -1,9 +1,5 @@
 # The results evaluation of RNAseq aligners on synthetic and real datasets
 
-[![N|Solid](https://cldup.com/dTxpPi9lDf.thumb.png)](https://nodesource.com/products/nsolid)
-
-[![Build Status](https://travis-ci.org/joemccann/dillinger.svg?branch=master)](https://travis-ci.org/joemccann/dillinger)
-
 ## Evaluation synthetic datasets
 The evaluation of synthetic dataset was inspired by RNAseqEval project (https://github.com/kkrizanovic/RNAseqEval). deSALT compares the alignment files (SAM or BAM) to the simulation data generation by PBSIM which have ground truth. In order to reveal the performance of aligners, we take the potential structure of simulation data into consideration. We evaluate the results from four aspects:
 1. the overview of evaluation;
