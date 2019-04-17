@@ -90,6 +90,11 @@ The ONT1D-like reads:
 ---
 ### One example for generation simulation dataset
 Here is the pipeline of reads simulation, take fruitfly reference and annotations for example.
+
+#### Get dataset
+The reference genome and processed gene annotations of fruitfly can be download from https://drive.google.com/file/d/1DV3lu0PVydmTWfuPO-KjPl3TUG1gXoF9/view?usp=sharing
+https://drive.google.com/file/d/1kflPFrkPWwQzggjX-sGTEBpxMgymvWhh/view?usp=sharing
+
 ```
 python Annotation_grouping.py Drosophila_melanogaster.BDGP6.94.gtf
 
