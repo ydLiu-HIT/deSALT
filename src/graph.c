@@ -58,7 +58,7 @@ void delGraph()
 	if (Dp_graph != NULL)	free(Dp_graph);
 }
 
-/*
+
 void show_uniseed(uni_seed *uniseed, uint32_t uniseedNum)
 {
 	uint32_t i;
@@ -68,7 +68,7 @@ void show_uniseed(uni_seed *uniseed, uint32_t uniseedNum)
 			uniseed[i].ref_begin, uniseed[i].ref_end);
 	}
 }
-
+/*
 void show_vertexm(vertex_m *vertexArr, uint32_t vertexNum)
 {
 	uint32_t i;

@@ -30,11 +30,11 @@
 #define MIN_FRAG_DIS 20
 #define SECONDARY_TO_PRIMARY 0.9
 #define E_SHIFT 5
-#define STRAND_DIFF 10
+#define STRAND_DIFF 20
 #define MIN_CHAIN_SCORE 20
 #define MAX_READ_JOIN_GAP 2000
 #define BATCH_SIZE 100000
-#define TEMP_FILE_PERFIRX "./skeletons"
+#define TEMP_FILE_PERFIRX "1pass_anchor"
 #define OUTPUT "./aln.sam"
 
 #define MAX_PTHREAD 48
@@ -163,7 +163,7 @@ typedef struct{
 	char *temp_file_perfix;
 	char *sam_path;
 	char *gtf_path;
-
+    char *anno_load_script;
 }param_map;
 
 typedef struct

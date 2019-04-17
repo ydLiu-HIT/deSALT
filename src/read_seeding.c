@@ -21,6 +21,7 @@
 #include "bseq.h"
 #include "aln_2pass.h"
 #include "desalt_index.h"
+#include "ktime.h"
 
 //variable extern
 uni_seed*** uniseed = NULL;
@@ -361,7 +362,7 @@ int single_seed_reduction_core_single64(uint64_t (*read_bit)[((MAX_READLEN - 1) 
 				seed_binary[1] += buffer_hash_g[seed_hash];
 			}
 
-			max_right_i = 0;
+			max_right_i = 1;
 			hit_binary0 = seed_binary[0];
 			hit_binary1 = seed_binary[1];
 
@@ -373,6 +374,7 @@ int single_seed_reduction_core_single64(uint64_t (*read_bit)[((MAX_READLEN - 1) 
 			{
 				break;
 			}
+            
 			for (hit_i = hit_binary0; hit_i <= hit_binary1; ++hit_i)
 			{
 				kmer_pos_uni = buffer_off_g[hit_i];//this kmer's offset on unipath seq
@@ -400,6 +402,9 @@ int single_seed_reduction_core_single64(uint64_t (*read_bit)[((MAX_READLEN - 1) 
 					        != ((read_bit[r_i][(read_off + seed_k_t - 1 + right_i) >> 5] >> ((31 - ((read_off + seed_k_t - 1 + right_i) & 0X1f)) << 1)) & 0X3)
 					        ) break;
  				}
+
+                //if (left_i + right_i - 2 < 2)
+                //    continue;
 
 				read_pos = read_off + 1 - left_i;
 				mem_length = seed_k_t + left_i + right_i - 2;
@@ -1143,7 +1148,7 @@ int load_fasta_1pass(bseq_file_t *bf)
     double t_s;
     while(seqii == read_in)
     {
-        t_s = clock();
+        t_s = realtime();
     	seqii = bseq_read(bf, read_in, query_info);
 
         TOTAL_READ_COUNTs += seqii;
@@ -1261,7 +1266,7 @@ int load_fasta_1pass(bseq_file_t *bf)
             read_len[r_i] = 0;
         }
         
-        fprintf(stderr, "[Skeleton-generation] Generating skeletons of %d reads, total %d bases in %f seconds\n", seqii, t_len, (double)(clock() - t_s)/CLOCKS_PER_SEC); 
+        fprintf(stderr, "[Skeleton-generation] Generating skeletons of %d reads, total %d bases in %f seconds\n", seqii, t_len, realtime() - t_s); 
 
 		//seqii = 0;
     }
@@ -1651,17 +1656,22 @@ int desalt_aln(int argc, char *argv[], const char *version)
 	memset(temp_binary_pos, 0, 1024);
     if (opt->temp_file_perfix == NULL)
     {
+        //opt->temp_file_perfix = strdup("1pass_anchor");
         strcpy(temp_anchor_dir, "./skeletons.lines");
+        //strcat(temp_anchor_dir, opt->temp_file_perfix);
+        //strcat(temp_anchor_dir, "skeletons.lines");
 
         strcpy(temp_binary_pos, "./skeletons.pos");
+        //strcat(temp_binary_pos, opt->temp_file_perfix);
+    	//strcat(temp_binary_pos, "skeletons.pos");
     }
     else
     {
         strcpy(temp_anchor_dir, opt->temp_file_perfix);
-        strcat(temp_anchor_dir, "skeletons.lines");
+        strcat(temp_anchor_dir, "1pass_anchor.lines");
 
         strcpy(temp_binary_pos, opt->temp_file_perfix);
-        strcat(temp_binary_pos, "skeletons.pos");
+        strcat(temp_binary_pos, "1pass_anchor.pos");
     }
 
 	//variable in this file
@@ -1718,14 +1728,14 @@ int desalt_aln(int argc, char *argv[], const char *version)
 	init_memory(opt, index_dir);
 
 	fprintf(stderr, "[Phase-INFO] Seeding and Chaining Phase (first-pass)\n");
-    double tt1 = clock();
+    double tt1 = realtime();
 	load_fasta_1pass(bf);
-    fprintf(stderr, "[Phase-INFO] Total %d reads were processed in %f seconds (first-pass)\n", TOTAL_READ_COUNTs, (double)(clock() - tt1)/CLOCKS_PER_SEC);
+    fprintf(stderr, "[Phase-INFO] Total %d reads were processed in %.3f seconds (first-pass)\n", TOTAL_READ_COUNTs, realtime() - tt1);
     
     //reset batch size for accerlation of 2pass alignment
     if (TOTAL_READ_COUNTs < opt->batch_size)
     {
-        opt->batch_size = TOTAL_READ_COUNTs / 2 + 1; 
+        opt->batch_size = TOTAL_READ_COUNTs / 2 + 2; 
     }
     else if (TOTAL_READ_COUNTs < opt->batch_size * 5)
     {
@@ -1741,9 +1751,9 @@ int desalt_aln(int argc, char *argv[], const char *version)
 
 	fprintf(stderr, "[Phase-INFO] Refined Alignment Phase (second-pass)\n");
 	int Total_mapped_reads = 0;
-    double tt2 = clock();
+    double tt2 = realtime();
     load_fasta_2pass(map2ref_cnt, opt, read_fastq, &Total_mapped_reads);
-    fprintf(stderr, "[Phase-INFO] Total %d reads were mapped to genome in %f seconds (second-pass)\n", Total_mapped_reads, (double)(clock() - tt2)/CLOCKS_PER_SEC);
+    fprintf(stderr, "[Phase-INFO] Total %d reads were mapped to genome in %f seconds (second-pass)\n", Total_mapped_reads, realtime() - tt2);
 
 	del_finalmemory();
 	char cmd[2048];

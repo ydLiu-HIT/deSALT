@@ -21,6 +21,7 @@
 #include "hash_index.h"
 #include "format.h"
 #include "read_seeding.h"
+#include "ktime.h"
 
 // #define DEBUG
 // #define PRINT
@@ -1680,6 +1681,25 @@ void align_non_splice(void *km, uint8_t *qseq, uint8_t *tseq, uint32_t qlen, uin
 		ksw_extd2_sse(km, qlen, qseq, tlen, tseq, 5, mata_D, opt->gap_open_D, opt->gap_ex_D, opt->gap_open2_D, opt->gap_ex2_D, bandwith, opt->zdrop_D, opt->end_bonus, flag|KSW_EZ_EXTZ_ONLY|KSW_EZ_RIGHT, ez);
 	}
 }
+
+//static void merge_del_to_intron(_aln_t *aln)
+//{
+//    uint32_t *cigar = aln->cigar;
+//    int m_cigar = aln->n_cigar;
+//
+//    int i;
+//    int n_cigar = 0;
+//    int op, op_len;
+//    int thre = 30;
+//    
+//    //tran large 'D' to 'N' (> 30)
+//    for(i = 0; i < m_cigar; ++i)
+//    {
+//        op = cigar[i]&0xf;
+//		op_len = (cigar[i]>>4);
+//        if (op == 2 && op_len > 30)
+//    }
+//}
 
 static void align_core_primary(void *km, uint32_t seqlen, TARGET_t *anchor_map2ref, uint8_t *qseq0[2], uint8_t *qual0[2], _aln_t *aln, param_map *opt, ksw_extz_t *ez, ksw_extz_t *ez2, REF_t *ref_pos, REF_t *ref_temp, QUERY_t *query_pos, int *chr_n, uint32_t anchor_n, uint8_t strand, uint8_t tid, int key_total, int splice_flag, uint32_t left_bound, uint32_t right_bound)
 {
@@ -3604,7 +3624,7 @@ void load_fasta_2pass(uint32_t map2ref_cnt, param_map *opt, char *read_fastq, in
 	double t_s, t_e;
 	while(seqii == read_in)
 	{
-		t_s = clock();
+		t_s = realtime();
 		seqii = bseq_read_2pass(bf, read_in, seqio);
 		fprintf(stderr, "[Loop-ProcessReads] The %dst loop of refined alignment procedure with %d reads......\n", time, seqii);
 
@@ -3746,11 +3766,11 @@ void load_fasta_2pass(uint32_t map2ref_cnt, param_map *opt, char *read_fastq, in
 			if (anchor_map2ref[r_i].strand != 3)
 				change += 1;
 		}
-		t_e = clock();
+		t_e = realtime();
 		//output SAM
 		int mm = ff_print_sam (seqio, seqii, opt);
 		*Total_mapped_reads += mm;
-        fprintf(stderr, "[Loop-ProcessReads] Aligned %d reads to genome, and confirmed total %d exons' strand in %f seconds\n", mm, change, (double)(t_e - t_s)/CLOCKS_PER_SEC);	
+        fprintf(stderr, "[Loop-ProcessReads] Aligned %d reads to genome, and confirmed total %d exons' strand in %f seconds\n", mm, change, t_e - t_s);	
 
 
 		for(r_i = 0; r_i < seqii; ++r_i)

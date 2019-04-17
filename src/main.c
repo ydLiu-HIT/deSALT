@@ -36,7 +36,7 @@ static int usage(void)
 int main(int argc, char *argv[])
 {
 	int r = 1;
-	realtime0 = realtime();
+	double realtime0 = realtime();
 	double ts = clock();
 	if (argc < 2)	return usage();
 	if (strcmp(argv[1], "index") == 0)	r = desalt_index(argc, argv);

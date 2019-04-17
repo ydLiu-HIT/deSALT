@@ -61,7 +61,7 @@ int load_index_file(char *index_dir){
     strcat(unisize, "unipath.size");
     FILE *fp_num = fopen(unisize,"rb");
     if(fp_num ==NULL){
-        printf("File error opening file:wrong route or wrong file name\n");
+        printf("File error:wrong route or wrong file name\n");
         exit(1);
     }
     int temp;
