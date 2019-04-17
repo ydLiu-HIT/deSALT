@@ -95,6 +95,7 @@ Here is the pipeline of reads simulation, take fruitfly reference and annotation
 The reference genome and processed gene annotations of fruitfly can be download from https://drive.google.com/file/d/1DV3lu0PVydmTWfuPO-KjPl3TUG1gXoF9/view?usp=sharing
 https://drive.google.com/file/d/1kflPFrkPWwQzggjX-sGTEBpxMgymvWhh/view?usp=sharing
 
+The following scripts give the pipeline of simulation data generation.
 ```
 python Annotation_grouping.py Drosophila_melanogaster.BDGP6.94.gtf
 
