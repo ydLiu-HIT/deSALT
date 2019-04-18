@@ -130,5 +130,8 @@ For synthetic dataset, deSALT compares the alignment files (SAM or BAM) to the s
 
 As for the evaluation of real datasets, we compare the alignment files to corresponding annotations. For each alignment, we find the most overlapped transcript in annotations as aligned transcript, then detect the overlapped exons and calculate the boundaries to make a decision whether the alignment is a good alignment. The details also refer to https://github.com/ydLiu-HIT/deSALT/blob/master/evaluation/data_evaluation.md.
 
+## Reference
+bioRxiv 612176; doi: https://doi.org/10.1101/612176
+
 ## Contact
 For advising, bug reporting and requiring help, please contact ydwang@hit.edu.cn or ydliu@hit.edu.cn
