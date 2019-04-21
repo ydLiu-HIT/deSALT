@@ -41,7 +41,7 @@ deSALT aln <index_route> read.fa/fq
 Algorithm options:
 
 	-t --thread           [INT]	Number of threads. [4]
-	-K --index-kmer       [INT]	K-mer length of RdBG-index, the default index kmer-size of deBGA.[22]
+	-K --index-kmer       [INT]	K-mer length of RdBG-index, the default index kmer-size of deBGA.[21,22]
 	-k --seeding-kmer     [INT]	K-mer length of seeding process (no long than RdBG-index). [15]
 	-a --local-hash-kmer  [INT]	K-mer length of local hash process. In order to detect spanning exons in 2-pass
 					alignment, a local hash query procedure is needed. The hash kmer is recommend no 
