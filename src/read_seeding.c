@@ -51,6 +51,7 @@ int TOTAL_READ_COUNTs;
 char command[1024];
 uint8_t read_type = 5;
 int *read_len = NULL;
+int POS_N_MAX = 0;
 
 static void init_map_param(param_map *opt)
 { 	
@@ -322,20 +323,7 @@ int single_seed_reduction_core_single64(uint64_t (*read_bit)[((MAX_READLEN - 1) 
 				kmer_bit = (((read_bit[r_i][read_off >> 5] & bit_tran_re[re_d]) << ((re_d - re_b) << 1)) | (read_bit[r_i][(read_off >> 5) + 1] >> ((re_2bt - re_d) << 1)));
 			}
 
-			if (seed_k_t < k_first_level)
-			{
-				kmer_bit = (kmer_bit << (t << 1));
-				hash_upper_bound = kmer_bit;
-				hash_low_bound = kmer_bit + (1 << (t << 1)) - 1;
-
-				seed_binary[0] = 0;
-				seed_binary[0] += buffer_hash_g[hash_upper_bound];
-				seed_binary[1] = 0;
-                seed_binary[1] += buffer_hash_g[hash_low_bound + 1] - 1;
-				if (seed_binary[1] < seed_binary[0])
-					continue;
-			}
-			else if (seed_k_t == k_first_level)
+			if (seed_k_t == k_first_level) //k = 14
 			{
 				seed_hash = kmer_bit; //
 
@@ -366,7 +354,7 @@ int single_seed_reduction_core_single64(uint64_t (*read_bit)[((MAX_READLEN - 1) 
 			hit_binary0 = seed_binary[0];
 			hit_binary1 = seed_binary[1];
 
-			if ((hit_binary1 - hit_binary0) > uni_pos_n_max)
+			if ((hit_binary1 - hit_binary0 + 1) > uni_pos_n_max)
 			{
 				continue;
 			}
@@ -375,6 +363,7 @@ int single_seed_reduction_core_single64(uint64_t (*read_bit)[((MAX_READLEN - 1) 
 				break;
 			}
             
+            int ref_cnt = 0;
 			for (hit_i = hit_binary0; hit_i <= hit_binary1; ++hit_i)
 			{
 				kmer_pos_uni = buffer_off_g[hit_i];//this kmer's offset on unipath seq
@@ -382,9 +371,13 @@ int single_seed_reduction_core_single64(uint64_t (*read_bit)[((MAX_READLEN - 1) 
 				seed_id_r = binsearch_interval_unipath64(kmer_pos_uni, buffer_seqf, result_seqf);
 
 				ref_pos_n = buffer_pp[seed_id_r + 1] - buffer_pp[seed_id_r];
-				if (ref_pos_n > pos_n_max)
+                ref_cnt += ref_pos_n;
+
+				if (ref_cnt > POS_N_MAX)
+                //if(ref_pos_n > pos_n_max)
 				{
-					continue;
+                    //continue;
+					break;
 				}
 				uni_offset_s_l = kmer_pos_uni - buffer_seqf[seed_id_r];
 				uni_offset_s_r = buffer_seqf[seed_id_r + 1] - (kmer_pos_uni + seed_k_t);
@@ -402,9 +395,6 @@ int single_seed_reduction_core_single64(uint64_t (*read_bit)[((MAX_READLEN - 1) 
 					        != ((read_bit[r_i][(read_off + seed_k_t - 1 + right_i) >> 5] >> ((31 - ((read_off + seed_k_t - 1 + right_i) & 0X1f)) << 1)) & 0X3)
 					        ) break;
  				}
-
-                //if (left_i + right_i - 2 < 2)
-                //    continue;
 
 				read_pos = read_off + 1 - left_i;
 				mem_length = seed_k_t + left_i + right_i - 2;
@@ -1563,14 +1553,14 @@ int desalt_aln(int argc, char *argv[], const char *version)
 
 	if (argc - optind < 3)
 		return aln_usage();
-    if ((opt->seed_k_t < 13) || (opt->seed_k_t > 22))
+    if ((opt->seed_k_t < 14) || (opt->seed_k_t > opt->k_t))
     {
-        fprintf(stderr, "Input error: -k cannot be less than 13 or more than 22\n");
+        fprintf(stderr, "Input error: -k cannot be less than 14 or more than %d\n", opt->k_t);
         exit(1);
     }
     if ((opt->thread_n < 1) || (opt->thread_n > 48))
     {
-        fprintf(stderr, "Input error: -t cannot be less than 1 or more than 32\n");
+        fprintf(stderr, "Input error: -t cannot be less than 1 or more than 48\n");
         exit(1);
     }
     if ((opt->hash_kmer < 6) || (opt->hash_kmer > 10))
@@ -1692,13 +1682,25 @@ int desalt_aln(int argc, char *argv[], const char *version)
 	// opt->max_sw_mat = opt->max_read_join_gap * opt->max_intron_length;
 	min_chain_score = opt->min_chain_score;
 	seed_offset = k_t - seed_k_t;
-    // seed_num = ((readlen_max - seed_k_t) / seed_step) + 1;
     
     seed_num = 10000; // extract at moset 10000 seed every read
-    uni_pos_n_max = pow(2, seed_offset - 1); //may be more smaller
-    uni_pos_n_max = (uni_pos_n_max > 64)? 64 : uni_pos_n_max;
-    new_seed_cnt = seed_num * (uni_pos_n_max + 1);
 
+    // variable uni_pos_n_max and POS_N_MAX got from experience, which considering the speed and accuracy.
+    //uni_pos_n_max
+    if (seed_offset < 3)
+        uni_pos_n_max = pow(4, seed_offset);
+    else if (seed_offset < 6)
+        uni_pos_n_max = pow(2, seed_offset);
+    else
+        uni_pos_n_max = 64; //64
+
+    POS_N_MAX = 15;
+    if ((seed_k_t == 15) || (seed_k_t == 16))
+        POS_N_MAX = 25;
+    else if (seed_k_t == 14)
+        POS_N_MAX = 35;
+
+    new_seed_cnt = seed_num * (uni_pos_n_max + 1);
 	//waitlength
 	float els = 0.05;
 	float error = 0.2;
