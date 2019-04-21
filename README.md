@@ -107,9 +107,11 @@ In general, `index-kmer > seeding-kmer > local_hash_kmer`. Considering that `see
 |:------:|:------:|
 |18|22|
 |17|22|
-|16|20 / 22|
-|15|20 / 22|
-|14|20|
+|16|21 / 22|
+|15|21 / 22|
+|14|21|
+
+Additional, a smaller seed step(-s) and a smaller chain score(-c) will get a better result, but with the cost of more time.
 
 #### 2. Different specified temporary file path.
 `-f temp-file-perfix:` route of temporary files after the first-pass alignment,if users run more than one deSALT program in the same time in the same folder,users must point out different routes of temporary files for each single program! If no, every deSALT program will write temporary data to the same file which will cause crash of program in 2-pass alignment due to inconsistent temporary data. If uses run two deSALT program at the same time within the same folder, different temporary should be specified like follows:
