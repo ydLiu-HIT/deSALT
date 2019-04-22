@@ -101,7 +101,7 @@ Output options:
 
 `-a local-hash-kmer`: if one read has a spanning exon due to there are no seed matches between read and spanning exon in the 2-pass alignment, a extreme small kmer is needed to find matches.
 
-In general, `index-kmer > seeding-kmer > local_hash_kmer`. Considering that `seeding-kmer` is smaller than `index-kmer`, when we do a binary search for seeding process, the base of seeding-kmer is the perfix of index-kmer. Thus, a seeding-kmer will have at most **4<sup>(|index-kmer| - |seeding-kmer|)</sup>**. If we use a large index-kmer and a small seeding-kmer, the search space for seeding will be increased fast. Take the consider of time consumption, we give a suggestion of the corresponding index-kmer length and seeding-kmer length by the following table. A smaller index-kmer can be faster and the accuracy remain similar.
+In general, `index-kmer > seeding-kmer > local_hash_kmer`. Considering that `seeding-kmer` is smaller than `index-kmer`, when we do a binary search for seeding process, the base of seeding-kmer is the perfix of index-kmer. Thus, a seeding-kmer will have at most **4<sup>(|index-kmer| - |seeding-kmer|)</sup>**. If we use a large index-kmer and a small seeding-kmer, the search space for seeding will be increased fast. Take the consider of time consumption, we give a suggestion of the corresponding index-kmer length and seeding-kmer length by the following table. A smaller index-kmer can be faster and the accuracy remain similar. 
 
 |seeding-kmer | index-kmer|
 |:------:|:------:|
@@ -111,6 +111,7 @@ In general, `index-kmer > seeding-kmer > local_hash_kmer`. Considering that `see
 |15|21 / 22|
 |14|21|
 
+**What's more, with the limitation of RdBG-index kmer can not be less than 21, two binary search step are needs for seeding process, so a smaller seeding-kmer(e.g. k14) will take more time for alignment than a larger seeding-kmer(e.g. k15)**
 Additional, a smaller seed step(`-s`) and a smaller chain score(`-c`) will get a better result, but with the cost of more time.
 
 #### 2. Different specified temporary file path.
