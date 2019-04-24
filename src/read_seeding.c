@@ -1694,9 +1694,9 @@ int desalt_aln(int argc, char *argv[], const char *version)
     else
         uni_pos_n_max = 64; //64
 
-    POS_N_MAX = 15;
+    POS_N_MAX = 25;
     if ((seed_k_t == 15) || (seed_k_t == 16))
-        POS_N_MAX = 25;
+        POS_N_MAX = pos_n_max;
     else if (seed_k_t == 14)
         POS_N_MAX = 35;
 
