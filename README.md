@@ -5,13 +5,17 @@ deSALT - De Bruijn graph-based Spliced Aligner for Long Transcriptome reads
 
 ## Getting started
     git clone https://github.com/ydLiu-HIT/deSALT.git (git clone https://github.com/hitbc/deSALT.git)
-    cd deSALT/src
-    make
+    cd deSALT/src/deBGA-master/
+    make   ## built deBGA for RdBG-index
+    cd ..
+    make   ## built deSALT for alignment
     ./deSALT index ref.fa index_route
     ./deSALT aln index_route read.fq
     
     or 
     direct run deSALT in the same folder(I have built the source code)
+    
+    []
 
 ## Introduction
 deSALT(de Bruijn graph-based Spliced Aligner for Long Transcriptome reads) is a novel alignment approach with faster speed and sensitive exon identification. Taking the advantages of its novel two pass alignment strategy based on de Bruijn graph-based index, efficient alignment skeleton generation, sensitive exon identification and specifically designed local alignment, deSALT is a fast and accurate RNA-seq long read alignment approach. It has ability to produce high quality full-length read alignment, which is effective to recover the exons and splicing junctions along the entire reads. The workflow of deSALT can be found in `img` folder.
