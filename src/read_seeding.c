@@ -1718,7 +1718,7 @@ int desalt_aln(int argc, char *argv[], const char *version)
 	waitingLen = (int)(t * q);
 	BASE_true = seed_k_t + 1/error;
 	if (read_type == 1)
-		BASE_true = seed_k_t + 5;
+		BASE_true = seed_k_t + 7;
 
     bseq_file_t *bf;
     bf = bseq_open(read_fastq);
