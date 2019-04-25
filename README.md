@@ -17,7 +17,8 @@ deSALT - De Bruijn graph-based Spliced Aligner for Long Transcriptome reads
     direct run deSALT in the same folder(I have built the source code)
     
 
-**[Special reminder]**
+### **[Special reminder]**
+
 Researchers need to built the RdBG-index with the version of deBGA in my folder. Comparing to the previouse version deBGA(https://github.com/HongzheGuo/deBGA), I correct some bugs, and made some adjustments in order to adapt the requirement of deSALT. For example, set `START_POS_REF = 0` instead of `START_POS_REF = 2048` in `load_input.h` source file of deBGA, i.e. we set the reference genome starting from 0 rather than 2048.
 
 ## Introduction
