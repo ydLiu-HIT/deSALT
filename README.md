@@ -11,7 +11,7 @@ deSALT - De Bruijn graph-based Spliced Aligner for Long Transcriptome reads
     ./deSALT aln index_route read.fq
     
     or 
-    direct run deSALT in the same folder(I have built the source code)
+    run deSALT directly in the same folder (Executable programs have been built in advance.)
 
 ## Introduction
 deSALT(de Bruijn graph-based Spliced Aligner for Long Transcriptome reads) is a novel alignment approach with faster speed and sensitive exon identification. Taking the advantages of its novel two pass alignment strategy based on de Bruijn graph-based index, efficient alignment skeleton generation, sensitive exon identification and specifically designed local alignment, deSALT is a fast and accurate RNA-seq long read alignment approach. It has ability to produce high quality full-length read alignment, which is effective to recover the exons and splicing junctions along the entire reads. The workflow of deSALT can be found in `img` folder.
@@ -21,12 +21,12 @@ We benchmarked deSALT with 36 simulated datasets having various read length, seq
 deSALT is open source and free for non-commerical use which is mainly designed by Yadong Liu & Bo Liu and developed by Yadong Liu in Center for Bioinformatics, Harbin Institute of Technology, China.
 
 ## Memory usage
-The memory usage of deSALT can fit the configuraions of most modern servers and workstations. Its peak memory footprint depends on the size of reference genome mainly due to the generation of RdBG-index. 35 Gigabytes, 31 Gigabytes and 3.5 Gigabytes are required for Homo Sapiens(GRCh38), Mus Musculus(GRCm38) and Drosophila melanogaster(DM6) geomes, on a server with Intel Xeon CPU at 2.00 GHz, 1 Terabytes RAM running Linux Ubuntu 14.04. For instance, the peak memory is about 37.65 Gigabytes for human NA12878 dataset.
+DeSALT fits most modern servers and workstations and the peak memory footprint depends on the size of reference genome assembly. In practice, 35 Gigabytes, 31 Gigabytes and 3.5 Gigabytes are required for Homo Sapiens(GRCh38), Mus Musculus(GRCm38) and Drosophila melanogaster(DM6) geomes, on a server with Intel Xeon CPU at 2.00 GHz, 1 Terabytes RAM running Linux Ubuntu 14.04.
 
 ## Installation
-Current version of deSALT needs to be run on Linux operating system. The source code is written in C, and can be directly download from: https://github.com/ydLiu-HIT/deSALT or https://github.com/hitbc/deSALT. The makefile is attached. Use the make command for generating the executable file.
+Current version of deSALT has been tested on 64-bit Linux. The source code is written in C, and can be directly download from: https://github.com/ydLiu-HIT/deSALT or https://github.com/hitbc/deSALT. The makefile is attached. Use the make command for generating the executable file.
 
-Moreover, in current version of deSALT, we employed the deBGA mapper (https://github.com/HongzheGuo/deBGA) for generation RdBG-index. To be more user-firendly, we have built the source code of deBGA (version 0.1) into that of deSALT. I correct some bugs of deBGA and set `START_POS_REF = 0` instead of `START_POS_REF = 2048` in `load_input.h` source file of deBGA, i.e. we set the reference genome starting from 0 rather than 2048.
+Moreover, in current version of deSALT, we employed the deBGA mapper (https://github.com/HongzheGuo/deBGA) for generation RdBG-index. To be more user-firendly, we have built the source code of deBGA (version 0.1) and add the executable program into deSALT. It is worth noting that some bugs of deBGA have been corrected and some parameters have been reset (i.e. `START_POS_REF = 0` replaced `START_POS_REF = 2048` in `load_input.h` of deBGA).
 
 ## Synopsis
 Reference genome indexing
@@ -141,4 +141,4 @@ As for the evaluation of real datasets, we compare the alignment files to corres
 bioRxiv 612176; doi: https://doi.org/10.1101/612176
 
 ## Contact
-For advising, bug reporting and requiring help, please contact ydwang@hit.edu.cn or ydliu@hit.edu.cn
+For advising, bug reporting and requiring help, please post on GitHub Issue or contact ydliu@hit.edu.cn.
