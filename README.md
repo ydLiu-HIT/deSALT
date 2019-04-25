@@ -14,7 +14,7 @@ deSALT - De Bruijn graph-based Spliced Aligner for Long Transcriptome reads
     ./deSALT aln index_route read.fq
     
     or 
-     run deSALT directly in the same folder (Executable programs have been built in advance.)
+    run deSALT directly in the same folder (Executable programs have been built in advance.)
     
 
 ### **[Special emphasis]**
