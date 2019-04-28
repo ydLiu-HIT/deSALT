@@ -14,7 +14,7 @@ deSALT - De Bruijn graph-based Spliced Aligner for Long Transcriptome reads
     ./deSALT aln index_route read.fq
     
     or 
-     run deSALT directly in the same folder (Executable programs have been built in advance.)
+    run deSALT directly in the same folder (Executable programs have been built in advance.)
     
 
 ### **[Special emphasis]**
@@ -70,6 +70,7 @@ Algorithm options:
 	-p --secondary-ratio  [FLOAT]	Min secondary-to-primary score ratio. An alignment can be regard as a secondary
 					alignment if secondary_score / primary_score > 0.9. [0.9]
 	-p --e-shift          [INT]	The number of downstream (upstream) exons will be processed when left (right) extension. [5]
+	-T --trans-strand               Find splicing sites in transcript strand.
     	-G --gtf              [STR]	Provided an annotation file for precise intron donor and acceptor sites.
     	                           	The version information of annotation file and reference genome must the same!
 	-x --read-type        [STR]	Specifiy the type of reads and set multiple paramters unless overriden.
@@ -103,7 +104,7 @@ Output options:
 	-o --output           [STR]     Output file (SAM format). [./aln.sam]
 ```
 ## Important options
-#### 1. Three different kmer length in deSALT.
+### 1. Three different kmer length in deSALT.
 
 `-K index-kmer`: the kmer length to construct the reference de Bruijn graph index(RdBG-index), which organize the reference by unitigs. The default length is 22bp with length range from 20-28bp.
 
@@ -123,9 +124,11 @@ In general, `index-kmer > seeding-kmer > local_hash_kmer`. Considering that `see
 
 **What's more, with the limitation of RdBG-index kmer can not be less than 21, two binary search step are needs for seeding process, so a smaller seeding-kmer(e.g. k14) will take more time for alignment than a larger seeding-kmer(e.g. k15)**
 
-Additional, a smaller seed step(`-s`) and a smaller chain score(`-c`) will get a better result, but with the cost of more time.
+**Additional, a smaller seed step(`-s`) and a smaller chain score(`-c`) will get a better result, but with the cost of more time.**
 
-#### 2. Different specified temporary file path.
+### 2. For Iso-seq, Direct RNA-seq, the parameter `-T` can be applied to detect splicing junction site in forward transcript strand only.
+
+### 3. Different specified temporary file path.
 `-f temp-file-perfix:` route of temporary files after the first-pass alignment,if users run more than one deSALT program in the same time in the same folder,users must point out different routes of temporary files for each single program! If no, every deSALT program will write temporary data to the same file which will cause crash of program in 2-pass alignment due to inconsistent temporary data. If uses run two deSALT program at the same time within the same folder, different temporary should be specified like follows:
 ```
 deSAL aln -f tmp_path1 -o out1.sam index_route read1.fq   #the first deSALT program
