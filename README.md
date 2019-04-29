@@ -122,7 +122,7 @@ In general, `index-kmer > seeding-kmer > local_hash_kmer`. Considering that `see
 |15|21 / 22|
 |14|21|
 
-**What's more, with the limitation of RdBG-index kmer can not be less than 21, two binary search step are needs for seeding process, so a smaller seeding-kmer(e.g. k14) will take more time for alignment than a larger seeding-kmer(e.g. k15)**
+**What's more, with the limitation of RdBG-index kmer can not be less than 21, two binary search steps are needed for seeding process, so a smaller seeding-kmer(e.g. k14) will take more time for alignment than a larger seeding-kmer(e.g. k15)**
 
 **Additional, a smaller seed step(`-s`) and a smaller chain score(`-c`) will get a better result, but with the cost of more time.**
 

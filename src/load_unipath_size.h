@@ -35,10 +35,10 @@ extern uint64_t result_kmer_g;
 extern uint64_t result_off_g;
 extern uint64_t result_ref_g;
 
-extern uint64_t chr_end_n[MAX_CHR_NUM];
+extern uint32_t chr_end_n[MAX_CHR_NUM];
 extern char chr_names[MAX_CHR_NUM][MAX_CHR_NAME_LENGTH];
 extern char chr_line_content[MAX_CHR_NAME_LENGTH];
-extern uint32_t chr_file_n;
+extern int chr_file_n;
 extern uint64_t reference_len;
 
 int load_index_file(char *index_dir);

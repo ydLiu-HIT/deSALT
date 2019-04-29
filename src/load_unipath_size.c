@@ -21,10 +21,10 @@ uint64_t* buffer_p = NULL;
 uint64_t* buffer_pp = NULL;
 uint64_t* buffer_hash_g = NULL;
 uint64_t reference_len = 0;
-uint64_t chr_end_n[MAX_CHR_NUM];
+uint32_t chr_end_n[MAX_CHR_NUM];
 char chr_names[MAX_CHR_NUM][MAX_CHR_NAME_LENGTH];
 char chr_line_content[MAX_CHR_NAME_LENGTH];
-uint32_t chr_file_n = 1;
+int chr_file_n = 1;
 
 //uint8_t* buffer_edge = NULL;
 
@@ -399,7 +399,8 @@ int load_index_file(char *index_dir){
         {
             strcpy(chr_names[chr_file_n],chr_line_content);
         }else{
-            sscanf(chr_line_content, "%"PRId64"", &chr_end_n[chr_file_n]);
+            //sscanf(chr_line_content, "%"PRId64"", &chr_end_n[chr_file_n]);
+            sscanf(chr_line_content, "%u", &chr_end_n[chr_file_n]);
             chr_file_n++;
         }
         fflush(stdout);
