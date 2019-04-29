@@ -48,7 +48,7 @@ cat group2/*.fastq > dataset_sim_dm_CLR_g2.fastq
 cat group3/*.fastq > dataset_sim_dm_CLR_g3.fastq
 
 python ../tran_qname.py dataset_sim_dm_CLR_g1.fastq SimG1_S g1.fastq
-mv g1.fastq dataset_sim_dm_CLR__g1.fastq
+mv g1.fastq dataset_sim_dm_CLR_g1.fastq
 python ../tran_qname.py dataset_sim_dm_CLR_g2.fastq SimG2_S g2.fastq
 mv g2.fastq dataset_sim_dm_CLR_g2.fastq
 python ../tran_qname.py dataset_sim_dm_CLR_g3.fastq SimG3_S g3.fastq
