@@ -103,6 +103,7 @@ static void init_map_param(param_map *opt)
 	opt->pos_n_max = 50;
 	opt->with_qual = 1;
     opt->with_gtf = 0;
+    opt->transcript_strand = 0;
 	opt->max_exon_num_per_read = 500; //after statics: human_max = 363, mouse_max = 347, dm_max = 82 
 	opt->readlen_max = MAX_READLEN;
 }
@@ -373,11 +374,11 @@ int single_seed_reduction_core_single64(uint64_t (*read_bit)[((MAX_READLEN - 1) 
 				ref_pos_n = buffer_pp[seed_id_r + 1] - buffer_pp[seed_id_r];
                 ref_cnt += ref_pos_n;
 
-				if (ref_cnt > POS_N_MAX)
-                //if(ref_pos_n > pos_n_max)
+				//if (ref_cnt > POS_N_MAX)
+                if(ref_pos_n > pos_n_max)
 				{
-                    //continue;
-					break;
+                    continue;
+					//break;
 				}
 				uni_offset_s_l = kmer_pos_uni - buffer_seqf[seed_id_r];
 				uni_offset_s_r = buffer_seqf[seed_id_r + 1] - (kmer_pos_uni + seed_k_t);
@@ -1345,7 +1346,7 @@ static int aln_usage(void)
 	fprintf(stderr, "Usage:\t\tdeSALT aln [options] <index_route> <read.fa/fq>\n\n");
 
 	fprintf(stderr, "Algorithm options:\n\n");
-	fprintf(stderr, "    -t --thread           [INT]    Number of threads. [1]\n");
+	fprintf(stderr, "    -t --thread           [INT]    Number of threads. [4]\n");
 	fprintf(stderr, "    -K --index-kmer       [INT]    K-mer length of RdBG-index. [%u]\n", INDEX_KMER);
 	fprintf(stderr, "    -k --seeding-kmer     [INT]    K-mer length of seeding process (no long than RdBG-index). [%u]\n", SEEDING_KMER);
 	fprintf(stderr, "    -a --local-hash-kmer  [INT]    K-mer length of local hash process. [%u]\n", LOCAL_HASH_KMER);
@@ -1360,6 +1361,7 @@ static int aln_usage(void)
 	fprintf(stderr, "    -g --max-read-gap     [INT]    Maximum allowed gap in read when chaining. [%u]\n", MAX_READ_JOIN_GAP);
 	fprintf(stderr, "    -p --secondary-ratio  [FLOAT]  Min secondary-to-primary score ratio. [%.2f]\n", SECONDARY_TO_PRIMARY);
     fprintf(stderr, "    -e --e-shift          [INT]    The number of downstream (upstream) exons will be processed when left (right) extension. [%u]\n", E_SHIFT);
+    fprintf(stderr, "    -T --trans-strand              Find splicing site according to transcript strand\n");
     fprintf(stderr, "    -G --gtf              [STR]    Provided an annotation file for precise intron donor and acceptor sites.\n");
     fprintf(stderr, "                                   The release of annotation file and reference genome must the same!\n");
 	fprintf(stderr, "    -x --read-type        [STR]    Specifiy the type of reads and set multiple paramters unless overriden.\n");
@@ -1409,7 +1411,7 @@ int help_usage()
 	fprintf(stderr, "Usage:	deSALT aln [options] <index_route> <read.fa/fq>\n\n");
 
 	fprintf(stderr, "Algorithm options:\n\n");
-	fprintf(stderr, "    -t --thread           [INT]    Number of threads. [1]\n");
+	fprintf(stderr, "    -t --thread           [INT]    Number of threads. [4]\n");
 	fprintf(stderr, "    -K --index-kmer       [INT]    K-mer length of RdBG-index. [%u]\n", INDEX_KMER);
 	fprintf(stderr, "    -k --seeding-kmer     [INT]    K-mer length of seeding process (no long than RdBG-index). [%u]\n", SEEDING_KMER);
 	fprintf(stderr, "    -a --local-hash-kmer  [INT]    K-mer length of local hash process. [%u]\n", LOCAL_HASH_KMER);
@@ -1424,6 +1426,7 @@ int help_usage()
 	fprintf(stderr, "    -g --max-read-gap     [INT]    Maximum allowed gap in read when chaining. [%u]\n", MAX_READ_JOIN_GAP);
 	fprintf(stderr, "    -p --secondary-ratio  [FLOAT]  Min secondary-to-primary score ratio. [%.2f]\n", SECONDARY_TO_PRIMARY);
     fprintf(stderr, "    -e --e-shift          [INT]    The number of downstream (upstream) exons will be processed when left (right) extension. [%u]\n", E_SHIFT);
+    fprintf(stderr, "    -T --trans-strand              Find splicing sites according to transcript strand\n");
     fprintf(stderr, "    -G --gtf              [STR]    Provided an annotation file for precise intron donor and acceptor sites.\n");
     fprintf(stderr, "                                   The release of annotation file and reference genome must the same!\n");
 	fprintf(stderr, "    -x --read-type        [STR]    Specifiy the type of reads and set multiple paramters unless overriden.\n");
@@ -1457,7 +1460,7 @@ int help_usage()
 	return 1;
 }
 
-static const char *short_option = "K:k:a:t:s:B:n:N:l:c:d:g:O:E:m:M:w:i:I:z:p:e:f:QG:o:hx:";
+static const char *short_option = "K:k:a:t:s:B:n:N:l:c:d:g:O:E:m:M:w:i:I:z:p:e:f:QTG:o:hx:";
 
 static struct option long_option[] = {
 	{"index-kmer", required_argument, NULL, 'K'},
@@ -1472,6 +1475,7 @@ static struct option long_option[] = {
 	{"max-exon", required_argument, NULL, 'r'},
 	{"min-chain-score", required_argument, NULL, 'c'},
     {"strand-diff", required_argument, NULL, 'd'},
+    {"trans_strand", no_argument, NULL, 'T'},
 	{"max-read-gap", required_argument, NULL, 'g'},
 	{"open-pen", required_argument, NULL, 'O'},
 	{"ext-pen", required_argument, NULL, 'E'},
@@ -1535,6 +1539,7 @@ int desalt_aln(int argc, char *argv[], const char *version)
 			case 'e': opt->e_shift = atoi(optarg); break;
 			case 'f': opt->temp_file_perfix = strdup(optarg); break;
 			case 'Q': opt->with_qual = 0; break;
+            case 'T': opt->transcript_strand = 1; break;
             case 'G': opt->gtf_path = strdup(optarg); opt->with_gtf = 1; break;
 			case 'o': opt->sam_path = strdup(optarg); break;
 			case 'h': return aln_usage(); break;
@@ -1628,7 +1633,7 @@ int desalt_aln(int argc, char *argv[], const char *version)
         }
     }else
 	{
-		fprintf(stderr, "[Param-INFO] deSALT parameters:index-kmer:%d\tseed-kmer:%d\thash-kmer:%d\tthread:%d\tstrand_diff:%d\tbatch_size:%d\n", opt->k_t, opt->seed_k_t, opt->hash_kmer, opt->thread_n, opt->strand_diff, opt->batch_size);
+		fprintf(stderr, "[Param-INFO] deSALT parameters:index-kmer:%d\tseed-kmer:%d\thash-kmer:%d\tthread:%d\tstrand_diff:%d\tidentify junction:%s\n", opt->k_t, opt->seed_k_t, opt->hash_kmer, opt->thread_n, opt->strand_diff, (opt->transcript_strand)? "transcript strand": "both_strand");
 	}
 	
 
@@ -1717,9 +1722,9 @@ int desalt_aln(int argc, char *argv[], const char *version)
 	float q = 1/error - seed_k_t * pow(1 - error, seed_k_t)/(1 - pow(1 - error, seed_k_t));
 	waitingLen = (int)(t * q);
 	BASE_true = seed_k_t + 1/error;
-	if (read_type == 1)
-		BASE_true = seed_k_t + 7;
-
+    if (read_type == 1)
+        BASE_true = seed_k_t + 7;
+    
     bseq_file_t *bf;
     bf = bseq_open(read_fastq);
     if(bf == 0)

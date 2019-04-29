@@ -146,6 +146,7 @@ typedef struct{
 	uint8_t k_t; //index kmer
 	uint8_t seed_k_t; //alignment kmer
     uint8_t with_gtf;
+    uint8_t transcript_strand;
     int strand_diff;
 
 	float error_overall;
@@ -227,7 +228,7 @@ uint8_t re_bt;
 uint8_t re_2bt;
 uint8_t top_n;
 uint8_t seed_step;
-uint8_t seed_offset;
+int8_t seed_offset;
 uint16_t pos_n_max;
 uint16_t uni_pos_n_max;
 int batch_size;
