@@ -20,7 +20,7 @@ deSALT - De Bruijn graph-based Spliced Aligner for Long Transcriptome reads
 ### **[Special emphasis]**
 
 In current version of deSALT, [deBGA](https://github.com/HongzheGuo/deBGA) is employed for generation of RdBG-index. Some bugs have been corrected and some parameters have been reset (i.e. `START_POS_REF = 0` replaced `START_POS_REF = 2048` in `load_input.h`). 
-Strongly recommend using the executable program in deSALT.
+**Strongly recommend using the executable program in deSALT.**
 
 ## Introduction
 deSALT(de Bruijn graph-based Spliced Aligner for Long Transcriptome reads) is a novel alignment approach with faster speed and sensitive exon identification. Taking the advantages of its novel two pass alignment strategy based on de Bruijn graph-based index, efficient alignment skeleton generation, sensitive exon identification and specifically designed local alignment, deSALT is a fast and accurate RNA-seq long read alignment approach. It has ability to produce high quality full-length read alignment, which is effective to recover the exons and splicing junctions along the entire reads. The workflow of deSALT can be found in `img` folder.
@@ -128,7 +128,14 @@ In general, `index-kmer > seeding-kmer > local_hash_kmer`. Considering that `see
 
 ### 2. For Iso-seq, Direct RNA-seq, the parameter `-T` can be applied to detect splicing junction site in forward transcript strand only.
 
-### 3. Different specified temporary file path.
+### 3. Align different kinds of reads with various sequencing error rates.
+`-x read-type:` deSALT can process reads from four main stream platforms,  i.e., ONT 1D reads (error rate: 25%), ONT 2D (1D2) reads (error rate: 12%), PacBio subreads (error rate: 15%) and PacBio ROI reads (error rate: 1%). The total sequencing error rates and the ratios of the sequencing errors (represented as mismatches: insertions: deletions) are configured by referring to previous studies[1-2].
+
+**For error-prone (ONT1D) reads, options `-k 14 -s 2 -x ont1d` are highly recommend to improve the accuracy of exons recovery and full length of transcripts generation.** Of course, it will cost more time than default parameters, but not too much.
+
+**For low error rate (CCS) reads, options `-x ccs -O6,24 -E1,0 -M4` are recommend to give alignments with fewer mismatches/gaps and to open introns more freely.**
+
+### 4. Different specified temporary file path.
 `-f temp-file-perfix:` route of temporary files after the first-pass alignment,if users run more than one deSALT program in the same time in the same folder,users must point out different routes of temporary files for each single program! If no, every deSALT program will write temporary data to the same file which will cause crash of program in 2-pass alignment due to inconsistent temporary data. If uses run two deSALT program at the same time within the same folder, different temporary should be specified like follows:
 ```
 deSAL aln -f tmp_path1 -o out1.sam index_route read1.fq   #the first deSALT program
@@ -152,3 +159,8 @@ bioRxiv 612176; doi: https://doi.org/10.1101/612176
 
 ## Contact
 For advising, bug reporting and requiring help, please post on GitHub Issue or contact ydliu@hit.edu.cn.
+
+## Reference
+[1] Weirather JL et al. Comprehensive comparison of Pacific Biosciences and Oxford Nanopore Technologies and their applications to transcriptome analysis. F1000Res (2017), 6: 100. 
+
+[2] Carneiro MO et al. Pacific biosciences sequencing technology for genotyping and variation discovery in human data. BMC Genomics (2012), 13:375. 
