@@ -20,7 +20,7 @@ deSALT - De Bruijn graph-based Spliced Aligner for Long Transcriptome reads
 ### **[Special emphasis]**
 
 In current version of deSALT, [deBGA](https://github.com/HongzheGuo/deBGA) is employed for generation of RdBG-index. Some bugs have been corrected and some parameters have been reset (i.e. `START_POS_REF = 0` replaced `START_POS_REF = 2048` in `load_input.h`). 
-Strongly recommend using the executable program in deSALT.
+**Strongly recommend using the executable program in deSALT.**
 
 ## Introduction
 deSALT(de Bruijn graph-based Spliced Aligner for Long Transcriptome reads) is a novel alignment approach with faster speed and sensitive exon identification. Taking the advantages of its novel two pass alignment strategy based on de Bruijn graph-based index, efficient alignment skeleton generation, sensitive exon identification and specifically designed local alignment, deSALT is a fast and accurate RNA-seq long read alignment approach. It has ability to produce high quality full-length read alignment, which is effective to recover the exons and splicing junctions along the entire reads. The workflow of deSALT can be found in `img` folder.
@@ -160,4 +160,5 @@ For advising, bug reporting and requiring help, please post on GitHub Issue or c
 
 ## Reference
 [1] Weirather JL et al. Comprehensive comparison of Pacific Biosciences and Oxford Nanopore Technologies and their applications to transcriptome analysis. F1000Res (2017), 6: 100. 
+
 [2] Carneiro MO et al. Pacific biosciences sequencing technology for genotyping and variation discovery in human data. BMC Genomics (2012), 13:375. 
