@@ -133,6 +133,8 @@ In general, `index-kmer > seeding-kmer > local_hash_kmer`. Considering that `see
 
 **For error-prone (ONT1D) reads, options `-k 14 -s 2 -x ont1d` are highly recommend to improve the accuracy of exons recovery and full length of transcripts generation.** Of course, it will cost more time than default parameters, but not too much.
 
+**For low error rate (CCS) reads, options `-x ccs -O6,24 -E1,0 -M4` are recommend to give alignments with fewer mismatches/gaps and to open introns more freely.**
+
 ### 4. Different specified temporary file path.
 `-f temp-file-perfix:` route of temporary files after the first-pass alignment,if users run more than one deSALT program in the same time in the same folder,users must point out different routes of temporary files for each single program! If no, every deSALT program will write temporary data to the same file which will cause crash of program in 2-pass alignment due to inconsistent temporary data. If uses run two deSALT program at the same time within the same folder, different temporary should be specified like follows:
 ```
