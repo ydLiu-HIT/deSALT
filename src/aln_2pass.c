@@ -1630,6 +1630,84 @@ static int call_mapping_bases(uint32_t *cigar, uint32_t n_cigar)
 	return mapping_bases;
 }
 
+uint32_t remove_large_del_to_intron(uint32_t *cigar, uint32_t n_cigar)
+{
+    int i, j;
+    int op, op_len;
+    int op1, op_len1;
+    int m_cigar = 0;
+    int sig = 0;
+    for(i = 0; i < n_cigar; ++i)
+    {
+        op = cigar[i]&0xf;
+        op_len = (cigar[i] >> 4);
+
+        if (op == 2 && op_len > 50)
+        {
+            cigar[i] = (op_len<<4) | 3; //N
+            sig = 1;
+        }
+    }
+    if (sig == 0)
+        return n_cigar;
+
+    i = 0;
+    while(i < n_cigar)
+    {
+        op = cigar[i]&0xf;
+        op_len = (cigar[i] >> 4);
+        if (op == 3)
+        {
+            j = i + 1;
+            int refl = 0;
+            int readl = 0;
+            while (j < n_cigar)
+            {
+                if (refl > 10)
+                {
+                    cigar[m_cigar] = cigar[i];
+                    break;
+                }
+
+                op1 = cigar[j]&0xf;
+                op_len1 = (cigar[j] >> 4);
+                if (op1 == 0)
+                {
+                    refl += op_len1;
+                    readl += op_len1;
+                }
+                else if(op1 == 1)
+                {
+                    readl += op_len1;
+                }
+                else if (op1 == 2)
+                {
+                    refl += op_len1;
+                }
+                else if (op1 == 3)
+                {
+                    cigar[m_cigar++] = (op_len + op_len1 + refl)<<4 | 3;
+                    cigar[m_cigar] = (readl << 4) | 1;
+                    i = j;
+                    break;
+                }
+                ++j;
+            }
+            if (j == n_cigar)
+            {
+                cigar[m_cigar] = cigar[i];
+            }
+        }
+        else
+        {
+            cigar[m_cigar] = cigar[i];
+        }
+        ++m_cigar;
+        ++i;
+    }
+    return m_cigar;
+}
+
 void align_splic_FOR_REV(void *km, uint8_t *qseq, uint8_t *tseq, uint32_t qlen, uint32_t tlen, int splice_flag, param_map *opt, ksw_extz_t *ez, uint8_t splice_type)
 {
 	if ((int64_t)tlen * qlen > opt->max_sw_mat)
@@ -2534,6 +2612,9 @@ END:
 	
 	//set alignment start pos
 	aln->_1_based_pos = _ts;
+
+    //remove large del 
+    aln->n_cigar = remove_large_del_to_intron(aln->cigar, aln->n_cigar);
 
     if (temp_ref_right != NULL) free(temp_ref_right);
     if (temp_ref_left != NULL) free(temp_ref_left);
