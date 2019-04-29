@@ -128,7 +128,12 @@ In general, `index-kmer > seeding-kmer > local_hash_kmer`. Considering that `see
 
 ### 2. For Iso-seq, Direct RNA-seq, the parameter `-T` can be applied to detect splicing junction site in forward transcript strand only.
 
-### 3. Different specified temporary file path.
+### 3. Align different kinds of reads with various sequencing error rates.
+`-x read-type:` deSALT can process reads from four main stream platforms,  i.e., ONT 1D reads (error rate: 25%), ONT 2D (1D2) reads (error rate: 12%), PacBio subreads (error rate: 15%) and PacBio ROI reads (error rate: 1%). The total sequencing error rates and the ratios of the sequencing errors (represented as mismatches: insertions: deletions) are configured by referring to previous studies[1-2].
+
+**For error-prone (ONT1D) reads, options `-k 14 -s 2 -x ont1d` are highly recommend to improve the accuracy of exons recovery and full length of transcripts generation. Of course, it will cost more time than default parameters, but not too much.**
+
+### 4. Different specified temporary file path.
 `-f temp-file-perfix:` route of temporary files after the first-pass alignment,if users run more than one deSALT program in the same time in the same folder,users must point out different routes of temporary files for each single program! If no, every deSALT program will write temporary data to the same file which will cause crash of program in 2-pass alignment due to inconsistent temporary data. If uses run two deSALT program at the same time within the same folder, different temporary should be specified like follows:
 ```
 deSAL aln -f tmp_path1 -o out1.sam index_route read1.fq   #the first deSALT program
