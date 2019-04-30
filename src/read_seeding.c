@@ -1723,7 +1723,15 @@ int desalt_aln(int argc, char *argv[], const char *version)
 	waitingLen = (int)(t * q);
 	BASE_true = seed_k_t + 1/error;
     if (read_type == 1)
-        BASE_true = seed_k_t + 7;
+    {
+	BASE_true = seed_k_t + 7;
+	opt->gap_open_D = opt->gap_open_R = 6;
+	opt->gap_open2_D = opt->gap_open2_R = 24;
+	opt->gap_ex_D = opt->gap_ex_R = 1;
+	opt->gap_ex2_D = opt->gap_ex2_R = 0;
+	opt->mismatch_D = opt->mismatch_R = 4;
+    }
+        
     
     bseq_file_t *bf;
     bf = bseq_open(read_fastq);
