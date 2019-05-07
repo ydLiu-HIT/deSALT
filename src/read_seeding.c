@@ -1730,6 +1730,7 @@ int desalt_aln(int argc, char *argv[], const char *version)
     {
         opt->gap_open_D = opt->gap_open_R = 6;
         opt->gap_open2_D = opt->gap_open2_R = 24;
+        opt->mismatch_D = opt->mismatch_R = 4;
         opt->noncan = 5; 
         BASE_true = seed_k_t + 7;
     }
