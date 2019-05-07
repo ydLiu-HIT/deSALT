@@ -161,6 +161,11 @@ bioRxiv 612176; doi: https://doi.org/10.1101/612176
 ## Contact
 For advising, bug reporting and requiring help, please post on GitHub Issue or contact ydliu@hit.edu.cn.
 
+## Thanks
+deSALT relies on the hard work of other projects.
+ - The reference de bruijn graph index(RdBG-index):https://github.com/HongzheGuo/deBGA
+ - Dynamic programming in the second phase:https://github.com/lh3/ksw2
+
 ## Reference
 [1] Weirather JL et al. Comprehensive comparison of Pacific Biosciences and Oxford Nanopore Technologies and their applications to transcriptome analysis. F1000Res (2017), 6: 100. 
 
