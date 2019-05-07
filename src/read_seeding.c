@@ -1728,6 +1728,8 @@ int desalt_aln(int argc, char *argv[], const char *version)
 	BASE_true = seed_k_t + 1/error;
     if (read_type == 1)
     {
+        opt->gap_open_D = opt->gap_open_R = 6;
+        opt->gap_open2_D = opt->gap_open2_R = 24;
         opt->noncan = 5; 
         BASE_true = seed_k_t + 7;
     }
