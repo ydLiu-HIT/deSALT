@@ -94,7 +94,7 @@ static void init_map_param(param_map *opt)
 	opt->max_sw_mat = 1000000000;
 	opt->Eindel = 20;
 	opt->thread_n = 4;
-	opt->top_n = 5; //2, 3
+	opt->top_n = TOP_NUM_ALN; //2, 3
 	opt->k_t = 22;
 	opt->e_shift = 5;
 	opt->hash_kmer = 8; //8
