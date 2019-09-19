@@ -164,8 +164,7 @@ typedef struct{
 	int max_extend_left_right;
 	char *temp_file_perfix;
 	char *sam_path;
-	char *gtf_path;
-    char *anno_load_script;
+	char *anno_path;
 }param_map;
 
 typedef struct

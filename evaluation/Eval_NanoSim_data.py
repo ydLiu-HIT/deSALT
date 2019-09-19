@@ -6,8 +6,7 @@ import re
 import copy
 from datetime import datetime
 
-
-import cal_background
+import cal_NanoSim_background
 
 # To enable importing from samscripts submodulew
 SCRIPT_PATH = os.path.dirname(os.path.realpath(__file__))
@@ -21,22 +20,16 @@ from fastqparser import read_fastq
 # Determines whether to check the strand whene analyzing data
 # Due to complications in generating simulated RNA reads, this is False
 P_CHECK_STRAND = False
-MIN_DEL_INTRON = 30
-
-# A dictionary connecting fasta/fastq header prefix with the folder with pbsim generated data
-# Containing information for reads with each prefix
-# This is used because data is simulated using several pbsim runs to get different
-# coverages for different sets of references (in this case transcripts)
-# NOTE: this should be changed for different simulations
-#simFolderDict = benchmark_params.simFolderDict
-# OLD: Predefined dictionaries for analyzing different datasets
-simFolderDict = {'SimG1' : 'group1'
-               , 'SimG2' : 'group2'
-               , 'SimG3' : 'group3'}
-
 
 DEBUG = False
-#DEBUG = True
+
+paramdefs = {'--version' : 0,
+             '-v' : 0,
+             '--split-qnames' : 1,
+             '-sqn' : 0,
+             '--save_query_names' : 0,
+             '--debug' : 0,
+             '--print_mapping' : 1}
 
 # Obsolete
 def interval_equals(interval1, interval2, allowed_inacc = Annotation_formats.DEFAULT_ALLOWED_INACCURACY):
@@ -79,6 +72,36 @@ def basesInside(startpos, endpos, startpos1, endpos1):
         return count
 
 
+class AllStatic:
+    def __init__(self):
+        self.Total_expected_exons = 0
+        self.Total_reads = 0
+        self.Total_bases = 0
+        self.Total_level2_reads = 0
+        self.Total_level2_r_reads = 0
+        self.Total_level3_SS_reads = 0
+        self.Total_level3_AS_reads = 0
+        self.Total_level4_2_5_reads = 0
+        self.Total_level4_6_9_reads = 0
+        self.Total_level4_10_reads = 0
+
+        self.Total_level2_bases = 0
+        self.Total_level2_r_bases = 0
+        self.Total_level3_SS_bases = 0
+        self.Total_level3_AS_bases = 0
+        self.Total_level4_2_5_bases = 0
+        self.Total_level4_6_9_bases = 0
+        self.Total_level4_10_bases = 0
+
+        self.Total_level2_expected_exons = 0
+        self.Total_level2_r_expected_exons = 0
+        self.Total_level3_SS_expected_exons = 0
+        self.Total_level3_AS_expected_exons = 0
+        self.Total_level4_2_5_expected_exons = 0
+        self.Total_level4_6_9_expected_exons = 0
+        self.Total_level4_10_expected_exons = 0
+
+
 class Static:
     def __init__(self):
         self.Total_reads = 0
@@ -88,8 +111,10 @@ class Static:
         self.Total_aligned_exons = 0
         self.Total_aligned_bases = 0
         self.ExR80 = 0
+        self.ExR90 = 0
         self.ExR100 = 0
         self.ExA80 = 0
+        self.ExA90 = 0
         self.ExA100 = 0
         self.Hit100 = 0
         self.Hit80 = 0
@@ -142,7 +167,7 @@ def load_and_process_SAM(sam_file, BBMapFormat = False):
                 for op in operations:
                     op1 = op[1]
                     op0 = op[0]
-                    if op[1] == 'D' and int(op[0]) >= MIN_DEL_INTRON:
+                    if op[1] == 'D' and int(op[0]) >= 10:
                         op1 = 'N'
                     newcigar += op0 + op1
                 samline_list[0].cigar = newcigar
@@ -264,14 +289,13 @@ def getChromName(header):
 
     return chromname
 
-
-def processData(datafolder, resultfile, annotationfile, Array, SS_list, csv_path):
+def processData(resultfile, annotationfile, SS_list, TotalReport, csv_path):
     sys.stderr.write('\n(%s) Loading and processing SAM file with mappings ... ' % datetime.now().time().isoformat())
     all_sam_lines = load_and_process_SAM(resultfile, BBMapFormat = True)
 
     # Reading annotation file
     annotations = Annotation_formats.Load_Annotation_From_File(annotationfile)
-    
+
     # Hashing annotations according to name
     annotation_dict = {}
     for annotation in annotations:
@@ -300,105 +324,41 @@ def processData(datafolder, resultfile, annotationfile, Array, SS_list, csv_path
 
     allowed_inacc = Annotation_formats.DEFAULT_ALLOWED_INACCURACY       # Allowing some shift in positions
     # Setting allowed inaccuracy
-    # allowed_inacc = 25
+    #allowed_inacc = 5
 
     # All samlines in a list should have the same query name
     for samline_list in all_sam_lines:
         qname = samline_list[0].qname
+        seqlen = len(samline_list[0].seq)
 
         # Checking the SAM file if all samlines in a list have the same qname
         for samline in samline_list[1:]:
             if samline.qname != qname:
                 sys.stderr.write('\nWARNING: two samlines in the same list with different query names (%s/%s)' % (qname, samline.qname))
+        
+        pos = qname.split('_')
+        simGeneName = pos[0]
+        maf_startpos = int(pos[1])
+        aln_sig = pos[2]
+        read_idx = int(pos[3])
+        maf_strand = pos[4]
+        l_clip = int(pos[5])
+        maf_length = int(pos[6])
+        r_clip = int(pos[7])
 
-        # Look for the first underscore in query name
-        # Everything before that is the simulation folder name
-        # Everything after that is simulated query name
-        pos = qname.find('_')
-        if pos < 0:
-            raise Exception('Invalid query name in results file (%s)!' % qname)
-
-        simFolderKey = qname[:pos]
-        if simFolderKey not in simFolderDict:
-            # import pdb
-            # pdb.set_trace()
-            raise Exception('Bad simulation folder short name (%s)!' % simFolderKey)
-        simFolder = simFolderDict[simFolderKey]
-        simQName = qname[pos+1:]
-
-        simFileSuffix = 'sd'
-
-        pos = simQName.find('_')
-        pos2 = simQName.find('_part')
-        if pos < 0:
-            raise Exception('Invalid simulated query name in results file (%s)!' % simQName)
-
-        # BBMap separates a query into smaller parts he can manage
-        # Extends query with '_part_#', which has to be ignored
-        if pos2 <> -1:
-            simQName = simQName[:pos2]
-
-        simRefNumber = int(simQName[1:pos])
-        simFileName = simFileSuffix + '_%04d' % simRefNumber
-        simRefFileName = simFileName + '.ref'
-        simSeqFileName = simFileName + '.fastq'
-        simMafFileName = simFileName + '.maf'
-
-        simFilePath = os.path.join(datafolder, simFolder)
-        simRefFilePath = os.path.join(simFilePath, simRefFileName)
-        # simSeqFilePath = os.path.join(simFilePath, simSeqFileName)
-        simMafFilePath = os.path.join(simFilePath, simMafFileName)
-
-        if not os.path.exists(simRefFilePath):
-            # import pdb
-            # pdb.set_trace()
-            raise Exception('Reference file for simulated read %s does not exist!' % qname)
-        #if not os.path.exists(simSeqFilePath):
-        #    raise Exception('Sequence file for simulated read %s does not exist!' % qname)
-        if not os.path.exists(simMafFilePath):
-            # import pdb
-            # pdb.set_trace()
-            raise Exception('Sequence alignment (MAF) for simulated read %s does not exist!' % qname)
-
-        # Reading reference file
-        [headers, seqs, quals] = read_fastq(simRefFilePath)
-        simGeneName = headers[0]
+        if "transcript" in simGeneName:
+            simGeneName = simGeneName.split(':')[1]
+        
         annotation = annotation_dict[simGeneName]       # Getting the correct annotation
-
-        #---------------------
-        #for i in xrange(len(annotation.items)):
-        #    print "(%d,%d)" %(annotation.items[i].start, annotation.items[i].end)
-
-        # Reading MAF file to get original position and length of the simulated read
-        # Query name should be a second item
-        maf_startpos = maf_length = 0
         maf_reflen = 0
-        i = 0
-        with open(simMafFilePath, 'rU') as maffile:
-            i += 1
-            for line in maffile:
-                if line[0] == 's':
-                    elements = line.split()
-                    maf_qname = elements[1]
-                    if maf_qname == 'ref':              # Have to remember data for the last reference before the actual read
-                        maf_startpos = int(elements[2])
-                        maf_length = int(elements[3])
-                        maf_strand = elements[4]
-                        maf_reflen = int(elements[5])
-                    if maf_qname == simQName:
-                        # maf_startpos = int(elements[2])
-                        # maf_length = int(elements[3])
-                        break
-
-        if maf_qname != simQName:
-            # import pdb
-            # pdb.set_trace()
-            raise Exception('ERROR: could not find query %s in maf file %s' % (qname, simMafFileName))
+        for i in range(len(annotation.items)):
+            maf_reflen += annotation.items[i].getLength()  # get the reference length from exons itemso
 
         # IMPORTANT: If the reads were generated from an annotation on reverse strand
         #            expected partial alignments must be reversed
         if annotation.strand == Annotation_formats.GFF_STRANDRV:
             maf_startpos = maf_reflen - maf_length - maf_startpos
+
 
         # Calculating expected partial alignmetns from MAF and annotations
         sigA = False
@@ -423,8 +383,6 @@ def processData(datafolder, resultfile, annotationfile, Array, SS_list, csv_path
             end = annotation.items[i].end
             assert start <= end
 
-        #    print "(%d, %d)" %(start, end)
-            
             # OLD: length = end-start+1
             # KK: End is already indicating position after the last base, so adding one when callculating length is not correct
             length = end - start
@@ -441,6 +399,10 @@ def processData(datafolder, resultfile, annotationfile, Array, SS_list, csv_path
             maf_startpos = 0
         #*****************************************
         #*****************************************
+        
+        # Total
+        num = len(expected_partial_alignments)
+        
         #level2
         for ele in expected_partial_alignments[1:-1]:
             if ele[1] - ele[0] < 30:
@@ -449,10 +411,9 @@ def processData(datafolder, resultfile, annotationfile, Array, SS_list, csv_path
                 break
 
         #level4
-        n = len(expected_partial_alignments)
-        if n < 6:
+        if num < 6:
             sigE = True
-        elif n > 5 and n < 10:
+        elif num > 5 and num < 10:
             sigF = True
         else:
             sigG = True
@@ -484,7 +445,7 @@ def processData(datafolder, resultfile, annotationfile, Array, SS_list, csv_path
                 # sl_startpos = samline.pos - 1   # SAM positions are 1-based
                 sl_startpos = samline.pos
                 reflength = samline.CalcReferenceLengthFromCigar()
-                readlength = samline.CalcAlignedBaseFromCigar()
+                readlength = samline.CalcReadLengthFromCigar()
                 #************************
                 #************************
                 sl_endpos = sl_startpos + reflength
@@ -526,6 +487,7 @@ def processData(datafolder, resultfile, annotationfile, Array, SS_list, csv_path
             num_recover_exons = len([x for x in parteqmap.values() if x == 1])
             num_hit_exons = len([x for x in parthitmap.values() if x == 1])
 
+
             if num_hit_exons == numparts:
                 static_dict["All"].Hit100 += 1
                 part_cal.cal(static_dict,sigA, sigC, sigE, sigF, "Hit100", 1)
@@ -540,45 +502,54 @@ def processData(datafolder, resultfile, annotationfile, Array, SS_list, csv_path
                 if num_recover_exons == sam_l:
                     static_dict["All"].ExA100 += 1
                     part_cal.cal(static_dict,sigA, sigC, sigE, sigF, "ExA100", 1)
+                    #file_correct.write(qname + '\n')
             if num_recover_exons >= int(0.8 * numparts):
                 static_dict["All"].ExR80 += 1
                 part_cal.cal(static_dict,sigA, sigC, sigE, sigF, "ExR80", 1)
                 if num_recover_exons >= int(0.8 * sam_l):
                     static_dict["All"].ExA80 += 1
                     part_cal.cal(static_dict,sigA, sigC, sigE, sigF, "ExA80", 1)
+            if num_recover_exons >= int(0.9 * numparts):
+                static_dict["All"].ExR90 += 1
+                part_cal.cal(static_dict,sigA, sigC, sigE, sigF, "ExR90", 1)
+                if num_recover_exons >= int(0.9 * sam_l):
+                    static_dict["All"].ExA90 += 1
+                    part_cal.cal(static_dict,sigA, sigC, sigE, sigF, "ExA90", 1)
             static_dict["All"].Total_aligned_exons += num_recover_exons
             part_cal.cal(static_dict,sigA, sigC, sigE, sigF, "Total_aligned_exons", num_recover_exons)
             static_dict["All"].Total_aligned_reads += 1
             part_cal.cal(static_dict,sigA, sigC, sigE, sigF, "Total_aligned_reads", 1)
-            #*************************************************************************************
+            #**************************************************************************************
 
 
     #************************************************
     #******************************************write csv
-    static_dict["All"].Total_reads = Array.Total_reads
-    static_dict["All"].Total_bases = Array.Total_bases
-    static_dict["All"].Total_expected_exons = Array.Total_expected_exons
-    static_dict["A"].Total_reads = Array.Total_level2_reads
-    static_dict["A"].Total_bases = Array.Total_level2_bases
-    static_dict["A"].Total_expected_exons = Array.Total_level2_expected_exons
-    static_dict["B"].Total_reads = Array.Total_level2_r_reads
-    static_dict["B"].Total_bases = Array.Total_level2_r_bases
-    static_dict["B"].Total_expected_exons = Array.Total_level2_r_expected_exons
-    static_dict["C"].Total_reads = Array.Total_level3_SS_reads
-    static_dict["C"].Total_bases = Array.Total_level3_SS_bases
-    static_dict["C"].Total_expected_exons = Array.Total_level3_SS_expected_exons
-    static_dict["D"].Total_reads = Array.Total_level3_AS_reads
-    static_dict["D"].Total_bases = Array.Total_level3_AS_bases
-    static_dict["D"].Total_expected_exons = Array.Total_level3_AS_expected_exons
-    static_dict["E"].Total_reads = Array.Total_level4_2_5_reads
-    static_dict["E"].Total_bases = Array.Total_level4_2_5_bases
-    static_dict["E"].Total_expected_exons = Array.Total_level4_2_5_expected_exons
-    static_dict["F"].Total_reads = Array.Total_level4_6_9_reads
-    static_dict["F"].Total_bases = Array.Total_level4_6_9_bases
-    static_dict["F"].Total_expected_exons = Array.Total_level4_6_9_expected_exons
-    static_dict["G"].Total_reads = Array.Total_level4_10_reads
-    static_dict["G"].Total_bases = Array.Total_level4_10_bases
-    static_dict["G"].Total_expected_exons = Array.Total_level4_10_expected_exons
+    static_dict["All"].Total_reads = TotalReport.Total_reads + 1
+    static_dict["All"].Total_bases = TotalReport.Total_bases + 1
+    static_dict["All"].Total_expected_exons = TotalReport.Total_expected_exons + 1
+    static_dict["A"].Total_reads = TotalReport.Total_level2_reads + 1
+    static_dict["A"].Total_bases = TotalReport.Total_level2_bases + 1
+    static_dict["A"].Total_expected_exons = TotalReport.Total_level2_expected_exons + 1
+    static_dict["B"].Total_reads = TotalReport.Total_level2_r_reads + 1
+    static_dict["B"].Total_bases = TotalReport.Total_level2_r_bases + 1
+    static_dict["B"].Total_expected_exons = TotalReport.Total_level2_r_expected_exons + 1
+    static_dict["C"].Total_reads = TotalReport.Total_level3_SS_reads + 1
+    static_dict["C"].Total_bases = TotalReport.Total_level3_SS_bases + 1
+    static_dict["C"].Total_expected_exons = TotalReport.Total_level3_SS_expected_exons + 1
+    static_dict["D"].Total_reads = TotalReport.Total_level3_AS_reads + 1
+    static_dict["D"].Total_bases = TotalReport.Total_level3_AS_bases + 1
+    static_dict["D"].Total_expected_exons = TotalReport.Total_level3_AS_expected_exons + 1
+    static_dict["E"].Total_reads = TotalReport.Total_level4_2_5_reads + 1
+    static_dict["E"].Total_bases = TotalReport.Total_level4_2_5_bases + 1
+    static_dict["E"].Total_expected_exons = TotalReport.Total_level4_2_5_expected_exons + 1
+    static_dict["F"].Total_reads = TotalReport.Total_level4_6_9_reads + 1
+    static_dict["F"].Total_bases = TotalReport.Total_level4_6_9_bases + 1
+    static_dict["F"].Total_expected_exons = TotalReport.Total_level4_6_9_expected_exons + 1
+    static_dict["G"].Total_reads = TotalReport.Total_level4_10_reads + 1
+    static_dict["G"].Total_bases = TotalReport.Total_level4_10_bases + 1
+    static_dict["G"].Total_expected_exons = TotalReport.Total_level4_10_expected_exons + 1
+
+    #print_static_dict(static_dict)
 
     with open(csv_path, "w") as fw:
         csv_write = csv.writer(fw, dialect = 'excel')
@@ -586,15 +557,19 @@ def processData(datafolder, resultfile, annotationfile, Array, SS_list, csv_path
         csv_write.writerow(header)
         for item in key:
             level = [item, str(static_dict[item].Total_reads) + ' reads/' + str(static_dict[item].Total_bases) + ' bases/' + str(static_dict[item].Total_expected_exons) + ' exons']
-            row1 = ["Aligned", round(100*static_dict[item].Total_aligned_reads/float(static_dict[item].Total_reads), 2)]
-            row2 = ["bases%", round(100*static_dict[item].Total_aligned_bases/float(static_dict[item].Total_bases), 2)]
-            #line = str(round(100*static_dict[item].ExR100/float(static_dict[item].Total_reads), 2)) + '/' + str(round(100*static_dict[item].ExR80/float(static_dict[item].Total_reads), 2))
-            #row3 = ["ExR100/80%", line]
+            row1 = ["Aligned", static_dict[item].Total_aligned_reads, round(100*static_dict[item].Total_aligned_reads/float(static_dict[item].Total_reads), 2)]
+            row2 = ["bases%", static_dict[item].Total_aligned_bases,  round(100*static_dict[item].Total_aligned_bases/float(static_dict[item].Total_bases), 2)]
+            #indicator for recall
+            line = str(round(100*static_dict[item].ExR100/float(static_dict[item].Total_reads), 2)) + '/' + str(round(100*static_dict[item].ExR90/float(static_dict[item].Total_reads), 2)) + '/' + str(round(100*static_dict[item].ExR80/float(static_dict[item].Total_reads), 2))
+            row3 = ["ExR100/90/80%", line]
+            #indicator for accuracy
+            #line = str(round(100*static_dict[item].ExA100/float(static_dict[item].Total_reads), 2)) + '/' + str(round(100*static_dict[item].ExA90/float(static_dict[item].Total_reads), 2)) + '/' + str(round(100*static_dict[item].ExA80/float(static_dict[item].Total_reads), 2))
+            #row4 = ["ExA100/90/80%", line]
             line = str(round(100*static_dict[item].ExA100/float(static_dict[item].Total_reads), 2)) + '/' + str(round(100*static_dict[item].ExA80/float(static_dict[item].Total_reads), 2))
-            row4 = ["Read100/80%", line]
-            #line = str(round(100*static_dict[item].Hit100/float(static_dict[item].Total_reads), 2)) + '/' + str(round(100*static_dict[item].Hit80/float(static_dict[item].Total_reads), 2))
-            #row5 = ["Hit100/80%", line]
-            row6 = ["Exons%", round(100*static_dict[item].Total_aligned_exons/float(static_dict[item].Total_expected_exons), 2)]
+            row4 = ["Read100/80%", static_dict[item].ExA100, static_dict[item].ExA80, line]
+            line = str(round(100*static_dict[item].Hit100/float(static_dict[item].Total_reads), 2)) + '/' + str(round(100*static_dict[item].Hit80/float(static_dict[item].Total_reads), 2))
+            row5 = ["Hit100/80%", line]
+            row6 = ["Exons%", static_dict[item].Total_aligned_exons, round(100*static_dict[item].Total_aligned_exons/float(static_dict[item].Total_expected_exons), 2)]
             csv_write.writerow(level)
             csv_write.writerow(row1)
             csv_write.writerow(row2)
@@ -603,40 +578,30 @@ def processData(datafolder, resultfile, annotationfile, Array, SS_list, csv_path
             #csv_write.writerow(row5)
             csv_write.writerow(row6)
 
+
 def verbose_usage_and_exit():
-    sys.stderr.write('Simulation study evaluation - A script for evaluation of simulation data generated by pbsim.\n')
+    sys.stderr.write('Simulation study evaluation - A script for evaluation of simulation data generated by NanoSim.\n')
     sys.stderr.write('\n')
     sys.stderr.write('Usage:\n')
-    sys.stderr.write('\t%s [simulationfolder] [alignmentfile] [annotationfile] [grouplist] [ss_list] [as_list] [csv_path]\n\n' %sys.argv[0])
-    sys.stderr.write('\t[simulationfolder]: the folder containing simulation datasets generated by PBSIM\n')
+    sys.stderr.write('\t%s [readfile] [alignmentfile] [annotationfile] [ss_list] [csv_path]\n\n' %sys.argv[0])
+    sys.stderr.write('\t[readfile]: the reads generated by NanoSim\n')
     sys.stderr.write('\t[alignmentfile]: the alignment results (SAM) of simulation data by aligners\n')
     sys.stderr.write('\t[annotationfile]: the annotations (GTF) of reference genome\n')
-    sys.stderr.write('\t[grouplist]: the groups where the simulation data were simulated with different sequencing depth by PBSIM\n')
     sys.stderr.write('\t[ss_list]: the list of transcripts id of all single splicing isoforms\n')
-    sys.stderr.write('\t[as_list]: the list of transcripts id of all alternative splicing isoforms\n')
     sys.stderr.write('\t[csv_path]: the results of evaluation\n')
 
-
-    sys.stderr.write('\n')
     exit(0)
 
 if __name__ == '__main__':
     if (len(sys.argv) < 2):
         verbose_usage_and_exit()
-
-    datafolder = sys.argv[1]
+    
+    readfile = sys.argv[1]
     resultfile = sys.argv[2]
     annotationfile = sys.argv[3]
-    group_list = sys.argv[4]
-    ss_list = sys.argv[5]
-    as_list = sys.argv[6]
-    csv_path = sys.argv[7]
+    ss_list = sys.argv[4]
+    csv_path = sys.argv[5]
 
-    Array = cal_background.process(datafolder, group_list, annotationfile, ss_list, as_list)
+    Array = cal_NanoSim_background.processData(readfile, annotationfile, ss_list)
 
-    print "Total reads: ", Array.Total_reads
-    print "Total bases: ", Array.Total_bases
-    print "Total exons:", Array.Total_expected_exons
-
-
-    processData(datafolder, resultfile, annotationfile, Array, ss_list, csv_path)
+    processData(resultfile, annotationfile, ss_list, Array, csv_path)
