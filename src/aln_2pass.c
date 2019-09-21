@@ -28,6 +28,8 @@
 int THREAD_READ_I;
 pthread_rwlock_t RWLOCK;
 
+Ival_Anno_t *IvalA = NULL;
+
 int find_chr_n_by_name(char *chr_name)
 {
 	int i;
@@ -75,6 +77,214 @@ void get_ref_onebyone(uint8_t *ref, uint32_t start, uint32_t len, uint32_t pre_p
     }
 }
 
+void get_junc(int chr_n, uint32_t start, uint32_t l, uint8_t *junc, uint8_t flag)
+{
+    if (!flag)
+        return ;
+    //uint32_t Sta = chr_end_n[chr_n - 1] - 1;
+    int32_t end = start + l;
+    int32_t i;
+    int32_t low, high, mid;
+
+    memset(junc, 0, end - start);
+    
+    Ival_Anno_t *IA;
+    low = 0;
+    IA = &IvalA[chr_n];
+    high = IA->Intron_n;
+    while(high > low)
+    {
+        mid = low + ((high - low) >> 1);
+        if (IA->Ival[mid].Is >= start) high = mid;
+        else low = mid + 1;
+    }
+
+    for(i = low; i < IA->Intron_n; ++i)
+    {
+        if (start <= IA->Ival[i].Is && end >= IA->Ival[i].Ie && IA->Ival[i].strand != 2)
+        {
+            if (IA->Ival[i].strand == 0)
+            {
+                junc[IA->Ival[i].Is - start] |= 1;
+                junc[IA->Ival[i].Ie - 1 - start] |= 2;
+            }
+            else
+            {
+                junc[IA->Ival[i].Is - start] |= 8;
+                junc[IA->Ival[i].Ie - 1 - start] |= 4;
+            }
+        }
+    }
+    
+}
+
+
+uint32_t apply_exon(param_map *opt, TARGET_t *anchor_map2ref, uint32_t map2ref_cnt, Anno_t *annotation, uint32_t total_items);
+
+int load_anchor(TARGET_t *anchor_map2ref, uint32_t map2ref_cnt);
+Ival_Anno_t *read_Annotation(param_map *opt, TARGET_t *anchor_map2ref, uint32_t map2ref_cnt, uint32_t *merge_cnt)
+{
+    FILE* fp_anno = fopen(opt->anno_path, "r");
+	if (fp_anno == NULL)
+	{
+		fprintf(stderr, "[Wrong!!!] Open pre-processed annotation file %s wrong.\n", opt->anno_path);
+		exit(0);
+	}
+
+	uint32_t TC_exon, TC_intron;
+    fscanf(fp_anno, "%u\t%u\n", &TC_exon, &TC_intron);
+    Ival_Anno_t *InterVal = (Ival_Anno_t *)calloc(chr_file_n, sizeof(Ival_Anno_t));
+
+    int i;
+    for (i = 0; i < chr_file_n; ++i)
+    {
+        InterVal[i].Intron_n = 0;
+        InterVal[i].Ival = (Ival_anno_t *)calloc(TC_intron, sizeof(Ival_anno_t));
+    }
+    Anno_t *annotation = (Anno_t *)calloc(TC_exon * 2, sizeof(Anno_t));
+    uint32_t idx_e = 0;
+    char LINE[65535];
+    char *p, *bs;
+    int chr_n;
+    int n_I;
+    int strand;
+    uint32_t Sta = 0;
+    while( fgets(LINE, 65535, fp_anno) != NULL)
+    {
+        p = strtok(LINE, "\t");
+        i = 0;
+        while(p)
+        {
+            if(i == 0) { //seqname
+                chr_n = find_chr_n_by_name(p);
+                Sta = chr_end_n[chr_n - 1] - 1;
+            } 
+            else if (i == 2) 
+            {
+                if(*p == '+')
+                    strand = 0;
+                else if(*p == '-')
+                    strand = 1;
+                else
+                    strand = 2;
+            } 
+            else if (i == 3) 
+            {
+                n_I = atol(p);
+            } 
+            else if (i == 4)
+            {
+                int Is, Ie;
+                bs = p;
+                int j;
+                Is = strtol(bs, &bs, 10) + Sta; ++bs;
+                Ie = strtol(bs, &bs, 10) + Sta; ++bs;
+                annotation[idx_e].start = Is;
+                annotation[idx_e].end = Ie;
+                idx_e++;
+                int st = Ie;
+                for(j = 1; j < n_I; ++j)
+                {
+                    Is = strtol(bs, &bs, 10) + Sta; ++bs;
+                    Ie = strtol(bs, &bs, 10) + Sta; ++bs;
+                    annotation[idx_e].start = Is;
+                    annotation[idx_e].end = Ie;
+                    annotation[idx_e].strand = strand;
+
+                    InterVal[chr_n].Ival[InterVal[chr_n].Intron_n].Is = st;
+                    InterVal[chr_n].Ival[InterVal[chr_n].Intron_n].Ie = Is - 1;
+
+                    InterVal[chr_n].Ival[InterVal[chr_n].Intron_n].strand = strand;
+                    InterVal[chr_n].Intron_n += 1;
+
+                    st = Ie;
+                    idx_e++;
+                }
+            }
+            
+            p = strtok(NULL, "\t");
+            i++;
+        }
+    }
+
+	
+    int tI1 = 0;
+    int tI2 = 0;
+    for(i = 0; i < chr_file_n; ++i)
+    {
+        tI1 += InterVal[i].Intron_n;
+	    qsort(InterVal[i].Ival, InterVal[i].Intron_n, sizeof(Ival_anno_t), compare_intron);
+        //remove redundant
+        int j = 0;
+        int nN = 1;
+        if (InterVal[i].Intron_n > 2)
+        {
+            uint32_t ts, te;
+            int strand;
+            ts = InterVal[i].Ival[j].Is;
+            te = InterVal[i].Ival[j].Ie;
+            strand = InterVal[i].Ival[j].strand;
+            j++;
+            while (j < InterVal[i].Intron_n)
+            {
+                if ((InterVal[i].Ival[j].Is == ts) && (InterVal[i].Ival[j].Ie == te) && (InterVal[i].Ival[j].strand == strand))
+                {
+                    j++;
+                    continue;
+                }
+                ts = InterVal[i].Ival[j].Is;
+                te = InterVal[i].Ival[j].Ie;
+                strand = InterVal[i].Ival[j].strand;
+                InterVal[i].Ival[nN].Is = ts;
+                InterVal[i].Ival[nN].Ie = te;
+                InterVal[i].Ival[nN].strand = strand;
+                
+                j++;
+                nN++;
+            }
+            InterVal[i].Intron_n = nN;
+            tI2 += nN;
+        }
+    }
+    qsort(annotation, idx_e, sizeof(Anno_t), compare_exon);
+    //remove redunant
+    if (idx_e > 2)
+    {
+        uint32_t ts, te;
+        int strand;
+        i = 1;
+        ts = annotation[0].start;
+        te = annotation[0].end;
+        strand = annotation[0].strand;
+        int nE = 1;
+        while(i < idx_e)
+        {
+            if ((annotation[i].start == ts) && (annotation[i].end == te) && (annotation[i].strand == strand))
+            {
+                i++;
+                continue;
+            }
+            ts = annotation[i].start;
+            te = annotation[i].end;
+            strand = annotation[i].strand;
+            annotation[nE].start = ts;
+            annotation[nE].end = te;
+            annotation[nE].strand = strand;
+            i++;
+            nE++;
+        }
+        idx_e = nE;
+    }
+
+   
+    *merge_cnt = apply_exon(opt, anchor_map2ref, map2ref_cnt, annotation, idx_e); //m2
+
+    fclose(fp_anno);
+    if (annotation != NULL) free(annotation);
+
+    return InterVal;
+}
+
 static void cal_overlap(uint32_t anchor_s, uint32_t anchor_e, uint32_t anno_s, uint32_t anno_e, int *overlap_num)
 {
 	uint32_t small = (anchor_s < anno_s)? anno_s : anchor_s;
@@ -104,7 +314,7 @@ static int have_overlap(uint32_t anchor_s, uint32_t anchor_e, uint32_t anno_s, u
 static int find_exact_match(Anno_t *annotations, uint32_t upper, uint32_t down, uint32_t ts, uint32_t te)
 {
 	int j;
-	int thre = 10;
+	int thre = 5;
 	int distance = 0;
 	int distance_min= 0xffff;
 	int idx = -1;
@@ -354,60 +564,8 @@ static int load_anchor_with_gtf(TARGET_t *anchor_map2ref, Anno_t *annotations, u
 	return final_merge_cnt;
 }
 
-static uint32_t get_annotations(param_map *opt, TARGET_t *anchor_map2ref, uint32_t map2ref_cnt)
+uint32_t apply_exon(param_map *opt, TARGET_t *anchor_map2ref, uint32_t map2ref_cnt, Anno_t *annotation, uint32_t total_items)
 {
-	//temp annotation out file
-	char annotation_dir[1024];
-    if (opt->temp_file_perfix == NULL)
-    {
-        strcpy(annotation_dir, "./annotations.txt");
-    }
-    else
-    {
-        strcpy(annotation_dir, opt->temp_file_perfix);
-        strcat(annotation_dir, "annotations.txt");
-    }
-	/*
-	exec python script for annotation loading
-	*/
-	FILE *f;
-	char s[1024];
-	int ret;
-
-	sprintf(s, "%s %s %s", opt->anno_load_script, opt->gtf_path, annotation_dir);
-    
-	f = popen(s, "r");
-	ret = fread(s, 1, 1024, f);
-
-	fclose(f);
-	//end python
-
-	FILE* fp_anno = fopen(annotation_dir, "r");
-
-	if (fp_anno == NULL)
-	{
-		fprintf(stderr, "[Wrong!!!] Open pre-processed annotation file %s wrong.\n", annotation_dir);
-		exit(0);
-	}
-
-	uint32_t total_items;
-	uint32_t i;
-	fscanf(fp_anno, "%u\n", &total_items);
-
-	Anno_t *annotation = (Anno_t *)calloc(total_items * 2, sizeof(Anno_t));
-    char CHR[1024];
-	int chr_n;
-    while(!feof(fp_anno))
-	{
-		fscanf(fp_anno, "%s\t%u\t%u\t%u", CHR, &annotation[i].strand, &annotation[i].start, &annotation[i].end);
-        chr_n = find_chr_n_by_name(CHR);
-		annotation[i].start += (chr_end_n[chr_n - 1] - 1); //the starting position is 1 in annotation file(has change to 0), deBGA starting pos is 1
-		annotation[i].end += (chr_end_n[chr_n - 1] - 1);
-		i++;
-	}
-
-	qsort(annotation, total_items, sizeof(Anno_t), compare_exon);
-
     //merge overlapped exon which two boundary both different as new exon
     uint32_t ts = annotation[0].start;
 	uint32_t te = annotation[0].end;
@@ -416,7 +574,7 @@ static uint32_t get_annotations(param_map *opt, TARGET_t *anchor_map2ref, uint32
 
     int j = 0;
     int sig = 0;
-    i = 1;
+    int i = 1;
     while (i < total_items)
     {
         j = i;
@@ -446,16 +604,15 @@ static uint32_t get_annotations(param_map *opt, TARGET_t *anchor_map2ref, uint32
     }
 
     total_items = total_items_new;
-    qsort(annotation, total_items, sizeof(Anno_t), compare_exon);
-	fclose(fp_anno);
+    qsort(annotation, total_items_new, sizeof(Anno_t), compare_exon);
 
 	//get trunk of annotations
-	Anno_range_t *anno_range = (Anno_range_t *)calloc(total_items, sizeof(Anno_range_t));
+	Anno_range_t *anno_range = (Anno_range_t *)calloc(total_items_new, sizeof(Anno_range_t));
 	uint32_t total_range = 0;
 	ts = annotation[0].start;
 	te = annotation[0].end;
 	uint32_t upper = 0;
-	for (i = 1; i < total_items; ++i)
+	for (i = 1; i < total_items_new; ++i)
 	{
 		if (have_overlap(ts, te, annotation[i].start, annotation[i].end))
 		{
@@ -481,19 +638,14 @@ static uint32_t get_annotations(param_map *opt, TARGET_t *anchor_map2ref, uint32
 	total_range++;
 
 	//load anchor an compare to annotation
-	uint32_t final_merge_cnt = load_anchor_with_gtf(anchor_map2ref, annotation, map2ref_cnt, total_items, anno_range, total_range);
+	uint32_t final_merge_cnt = load_anchor_with_gtf(anchor_map2ref, annotation, map2ref_cnt, total_items_new, anno_range, total_range);
 
-    if (annotation != NULL) free(annotation);
 	if (anno_range != NULL)	free(anno_range);
     
-    char cmd[1024];
-    sprintf(cmd, "rm %s", annotation_dir);
-    system(cmd);
-
 	return final_merge_cnt;
 }
 
-static int load_anchor(TARGET_t *anchor_map2ref, uint32_t map2ref_cnt)
+int load_anchor(TARGET_t *anchor_map2ref, uint32_t map2ref_cnt)
 {
 	uint32_t i, m;
 	FILE* fp_temp = fopen(temp_binary_pos, "rb");
@@ -511,6 +663,7 @@ static int load_anchor(TARGET_t *anchor_map2ref, uint32_t map2ref_cnt)
 	uint32_t coverage = 1;
 	int max_dis_connect = 30;
 	int filter = seed_k_t << 1;
+    //int filter = 20;
 
 	ts = anchor_map2ref[0].ts;
 	te = anchor_map2ref[0].te;
@@ -555,37 +708,6 @@ static int load_anchor(TARGET_t *anchor_map2ref, uint32_t map2ref_cnt)
 		merge_cnt++;
 	}
 
-	//m = merge_cnt;
-	//merge_cnt = 0;
-	//ts = anchor_map2ref[0].ts;
-	//te = anchor_map2ref[0].te;
-	//coverage = anchor_map2ref[0].cov;
-	//for (i = 1; i < m; ++i)
-	//{
-	//	if (anchor_map2ref[i].ts < te + max_dis_connect)
-	//	{
-	//		te = anchor_map2ref[i].te;
-	//		coverage += anchor_map2ref[i].cov;
-	//	}
-	//	else
-	//	{
-	//		anchor_map2ref[merge_cnt].ts = ts;
-	//		anchor_map2ref[merge_cnt].te = te;
-	//		anchor_map2ref[merge_cnt].cov = coverage;
-	//		anchor_map2ref[merge_cnt].strand = 3;
-	//		merge_cnt++;
-
-	//		ts = anchor_map2ref[i].ts;
-	//		te = anchor_map2ref[i].te;
-	//		coverage = anchor_map2ref[i].cov;
-	//	}
-	//}
-	//anchor_map2ref[merge_cnt].ts = ts;
-	//anchor_map2ref[merge_cnt].te = te;
-	//anchor_map2ref[merge_cnt].cov = coverage;
-	//anchor_map2ref[merge_cnt].strand = 3;
-	//merge_cnt++;
-	
 	fclose(fp_temp);
 
 	return merge_cnt;
@@ -920,66 +1042,7 @@ uint32_t local_hash_anchor(uint8_t *qseq, uint32_t qlen, uint32_t *idx_cnt_array
 		}
 	}
 
-	//have get the anchor idx count, to judge which anchor have be used
-	//sort idx_cnt_array
-	// float max;
-	// int max_idx;
-	// uint32_t l = 0;
-	// int tl;
-	// uint32_t qlen2 = qlen + qlen*0.134*0.36*2+10; //right boundary
-
-	// uint32_t real_cnt = 0;
-	// int *temp_arr = (int* )calloc(n, 4);
 	
-
-	// for (i = 0; i < n; ++i)
-	// {
-	// 	max = cov_score[0];
-	// 	max_idx = 0;
-	// 	for (j = 1; j < n; ++j)
-	// 	{
-	// 		if (max <= cov_score[j])
-	// 		{
-	// 			max = cov_score[j];
-	// 			max_idx = j;
-	// 		}
-	// 	}
-	// 	//change pos
-	// 	if(max == 0.0)
-    //     // if(max < 0.1)
-	// 		break;
-	// 	temp_arr[real_cnt++] = max_idx;
-	// 	cov_score[max_idx] = 0.0;
-
-	// 	tl = anchor_map2ref[max_idx + key1].te - anchor_map2ref[max_idx + key1].ts + 1;
-	// 	l += tl;
-	// 	if (l > qlen2) // have found
-	// 	{
-	// 		// real_cnt--;
-	// 		// l -= tl;
-	// 		// break;
-	// 		if (type == 0) //middle exon find
-	// 		{
-	// 			real_cnt--;
-	// 			l -= tl;
-	// 			break;
-	// 		}else //left or right find
-	// 		{
-	// 			// real_cnt -= (real_cnt == 1)? 0 : 1;
-	// 			break;
-	// 		}
-	// 	}
-	// }
-
-
-	// if (real_cnt > 1)
-	// 	qsort(temp_arr, real_cnt, sizeof(temp_arr[0]), compare_idx);
-
-	// for (i = 0; i < real_cnt; ++i)
-	// {
-	// 	idx_cnt_array[i] = temp_arr[i];
-	// }
-	// free(temp_arr);
 	free(cov_score);
 
 	return real_cnt;
@@ -1708,8 +1771,11 @@ uint32_t remove_large_del_to_intron(uint32_t *cigar, uint32_t n_cigar)
     return m_cigar;
 }
 
-void align_splic_FOR_REV(void *km, uint8_t *qseq, uint8_t *tseq, uint32_t qlen, uint32_t tlen, int splice_flag, param_map *opt, ksw_extz_t *ez, uint8_t splice_type)
+void align_splic_FOR_REV(void *km, uint8_t *qseq, uint8_t *tseq, uint32_t qlen, uint32_t tlen, int splice_flag, param_map *opt, ksw_extz_t *ez, uint8_t splice_type, uint8_t *junc)
 {
+    if (! (opt->with_gtf))
+        junc = NULL;
+
 	if ((int64_t)tlen * qlen > opt->max_sw_mat)
 	{
 		ksw_reset_extz(ez);
@@ -1720,15 +1786,15 @@ void align_splic_FOR_REV(void *km, uint8_t *qseq, uint8_t *tseq, uint32_t qlen, 
 	}
 	else if(splice_type == 0) //left extend
 	{
-		ksw_exts2_sse(km, qlen, qseq, tlen, tseq, 5, mata_R, opt->gap_open_R, opt->gap_ex_R, opt->gap_open2_R, opt->noncan, opt->zdrop_R, splice_flag|KSW_EZ_EXTZ_ONLY|KSW_EZ_RIGHT|KSW_EZ_REV_CIGAR, ez);
+		ksw_exts2_sse(km, qlen, qseq, tlen, tseq, 5, mata_R, opt->gap_open_R, opt->gap_ex_R, opt->gap_open2_R, opt->noncan, opt->zdrop_R, splice_flag|KSW_EZ_EXTZ_ONLY|KSW_EZ_RIGHT|KSW_EZ_REV_CIGAR, ez, junc);
 	}
 	else if(splice_type == 1) //right extend
 	{
-		ksw_exts2_sse(km, qlen, qseq, tlen, tseq, 5, mata_R, opt->gap_open_R, opt->gap_ex_R, opt->gap_open2_R, opt->noncan, opt->zdrop_R, splice_flag|KSW_EZ_EXTZ_ONLY, ez);
+		ksw_exts2_sse(km, qlen, qseq, tlen, tseq, 5, mata_R, opt->gap_open_R, opt->gap_ex_R, opt->gap_open2_R, opt->noncan, opt->zdrop_R, splice_flag|KSW_EZ_EXTZ_ONLY, ez, junc);
 	}
 	else  //end-to-end
 	{
-		ksw_exts2_sse(km, qlen, qseq, tlen, tseq, 5, mata_R, opt->gap_open_R, opt->gap_ex_R, opt->gap_open2_R, opt->noncan, opt->zdrop_R, splice_flag|KSW_EZ_APPROX_MAX, ez);
+		ksw_exts2_sse(km, qlen, qseq, tlen, tseq, 5, mata_R, opt->gap_open_R, opt->gap_ex_R, opt->gap_open2_R, opt->noncan, opt->zdrop_R, splice_flag|KSW_EZ_APPROX_MAX, ez, junc);
 	}
 }
 
@@ -1798,7 +1864,8 @@ static void align_core_primary(void *km, uint32_t seqlen, TARGET_t *anchor_map2r
 	int key_r;
 	uint32_t pre_pos = 0;
 	uint8_t *tseq = NULL;
-	
+    uint8_t *junc = NULL;
+    
 	int score = KSW_NEG_INF;
 	int score1 = KSW_NEG_INF;
 
@@ -1872,6 +1939,8 @@ static void align_core_primary(void *km, uint32_t seqlen, TARGET_t *anchor_map2r
 
     uint32_t LEN_t = tlen + 2*opt->max_extend_gap;
 	tseq = (uint8_t*)kmalloc(km, LEN_t);
+    if (opt->with_gtf)
+        junc = (uint8_t*)kmalloc(km, LEN_t);
 
 	//left extension
 	int l;
@@ -1952,9 +2021,16 @@ static void align_core_primary(void *km, uint32_t seqlen, TARGET_t *anchor_map2r
 		if (ts0 - l < chr_end_n[*chr_n - 1])
 			l = ts0 - chr_end_n[*chr_n - 1];
 		get_refseq(tseq, l, ts0 - l);
+        
+        if (opt->with_gtf)
+        {
+            get_junc(*chr_n, ts0 - l, l, junc, opt->with_gtf);
+            mm_seq_rev(l, junc);
+        }
+        
 		mm_seq_rev(qlen, qseq);
 		mm_seq_rev(l, tseq);
-		align_splic_FOR_REV(km, qseq, tseq, qlen, l, extra_flag_R, opt, ez, 0);
+		align_splic_FOR_REV(km, qseq, tseq, qlen, l, extra_flag_R, opt, ez, 0, junc);
 		mm_seq_rev(qlen, qseq);
 		if(ez->n_cigar > 0)
 		{
@@ -2159,7 +2235,9 @@ static void align_core_primary(void *km, uint32_t seqlen, TARGET_t *anchor_map2r
 			//for splice aligner
 			tlen = te_s - te_ - 1;			
 			get_refseq(tseq, tlen, te_ + 1);
-			align_splic_FOR_REV(km, qseq, tseq, qlen, tlen, extra_flag_R, opt, ez2, 2);
+            if (opt->with_gtf)
+                get_junc(*chr_n, te_ + 1, tlen, junc, opt->with_gtf);
+			align_splic_FOR_REV(km, qseq, tseq, qlen, tlen, extra_flag_R, opt, ez2, 2, junc);
 			
 			if (ez->score > ez2->score)
 			{
@@ -2242,7 +2320,9 @@ static void align_core_primary(void *km, uint32_t seqlen, TARGET_t *anchor_map2r
 			//for RNA aligner
 			tlen = te_s - te_ - 1;			
 			get_refseq(tseq, tlen, te_ + 1);
-			align_splic_FOR_REV(km, qseq, tseq, qlen, tlen, extra_flag_R, opt, ez2, 2);
+            if(opt->with_gtf)
+                get_junc(*chr_n, te_ + l, tlen, junc, opt->with_gtf);
+			align_splic_FOR_REV(km, qseq, tseq, qlen, tlen, extra_flag_R, opt, ez2, 2, junc);
 			
 			ez_tmp = (ez->score > ez2->score)? ez : ez2;
 
@@ -2359,7 +2439,9 @@ static void align_core_primary(void *km, uint32_t seqlen, TARGET_t *anchor_map2r
 			tlen = te_s - te_ - 1;
 				
 			get_refseq(tseq, tlen, te_ + 1);
-			align_splic_FOR_REV(km, qseq, tseq, qlen, tlen, extra_flag_R, opt, ez2, 2);
+            if(opt->with_gtf)
+                get_junc(*chr_n, te_ + 1, tlen, junc, opt->with_gtf);
+			align_splic_FOR_REV(km, qseq, tseq, qlen, tlen, extra_flag_R, opt, ez2, 2, junc);
 
 			ez_tmp = (ez->score > ez2->score)? ez : ez2;
 
@@ -2475,8 +2557,9 @@ END:
 		l += l2;
 		l = l < opt->max_extend_gap? l : opt->max_extend_gap;			
 		get_refseq(tseq, l, te0 + 1);
-
-		align_splic_FOR_REV(km, qseq, tseq, qlen, l, extra_flag_R, opt, ez, 1);
+        if(opt->with_gtf)
+            get_junc(*chr_n, te0 + 1, l, junc, opt->with_gtf);
+		align_splic_FOR_REV(km, qseq, tseq, qlen, l, extra_flag_R, opt, ez, 1, junc);
 
 		if(ez->n_cigar > 0)
 		{
@@ -2620,6 +2703,7 @@ END:
     if (temp_ref_left != NULL) free(temp_ref_left);
 	free(exon_find);
 	kfree(km, tseq);
+    kfree(km, junc);
 }
 
 static int find_merge_anchor(TARGET_t *anchor_map2ref, REF_t *ref_temp, REF_t *ref_pos, QUERY_t *query_pos, uint32_t anchor_n, int primary, uint32_t *new_n, param_map *opt)
@@ -2816,8 +2900,10 @@ static int align_core(void *km, TARGET_t *anchor_map2ref, uint32_t read_line, ui
 	reset_aln_t(aln);
 	REF_t *ref_pos = REF_pos[tid];
 	QUERY_t *query_pos = QUERY_pos[tid];
-	int signal = find_merge_anchor(anchor_map2ref, ref_temp, ref_pos, query_pos, anchor_n, primary, &anchor_n_new, opt);
+    
 
+	int signal = find_merge_anchor(anchor_map2ref, ref_temp, ref_pos, query_pos, anchor_n, primary, &anchor_n_new, opt); 
+    
 	if ((anchor_n_new > 0) && (anchor_n_new < opt->max_exon_num_per_read))
 	{
 		uint32_t i, j;
@@ -2929,6 +3015,8 @@ static int align_core(void *km, TARGET_t *anchor_map2ref, uint32_t read_line, ui
                     ref_temp[i].te = target_tmp_FOR[key].te;
                     ref_temp[i].key = key;
                 }
+
+                
                 align_core_primary(km, seqlen, target_tmp_FOR, qseq0, qual0, &aln[0], opt, ez, ez2, ref_pos, ref_temp, query_pos, &chr_n, anchor_n_new, strand, tid, key_total, MM_F_SPLICE_FOR, left_bound, right_bound);
 
                 //reverse
@@ -2944,6 +3032,7 @@ static int align_core(void *km, TARGET_t *anchor_map2ref, uint32_t read_line, ui
                     ref_temp[i].te = target_tmp_REV[ref_temp[i].key].te;
                 }
 
+                
                 align_core_primary(km, seqlen, target_tmp_REV, qseq0, qual0, &aln[1], opt, ez, ez2, ref_pos, ref_temp, query_pos, &chr_n, anchor_n_new, strand, tid, key_total, MM_F_SPLICE_REV, left_bound, right_bound);
 
                 which_strand = (aln[0].dp_score < aln[1].dp_score)? 1:0;
@@ -3078,6 +3167,17 @@ static int align_core(void *km, TARGET_t *anchor_map2ref, uint32_t read_line, ui
 static void splice_site_judge2(TARGET_t *anchor_map2ref, EXON_t *EXON_T, uint32_t merge_cnt, uint8_t offset)
 {
 	uint32_t i, j;
+    //for(i = 0; i < merge_cnt; ++i)
+    //{
+    //    EXON_T[i].ts_f = anchor_map2ref[i].ts;
+    //    EXON_T[i].te_f = anchor_map2ref[i].te;
+    //    EXON_T[i].ts_r = anchor_map2ref[i].ts;
+    //    EXON_T[i].te_r = anchor_map2ref[i].te;
+    //}
+
+    //return ;
+
+
 	uint32_t donor_anchor, donor_start;
 	uint32_t acceptor_anchor, acceptor_start;
 	
@@ -3720,17 +3820,10 @@ void load_fasta_2pass(uint32_t map2ref_cnt, param_map *opt, char *read_fastq, in
 	if (opt->with_gtf)
 	{
 		fprintf(stderr, "[Phase-INFO] Loading GTF annotations\n");
-		// fprintf(stderr, "[Phase-INFO] Implement alignment process with the help of gene annotations(GTF)\n");
-		merge_anchor_cnt = get_annotations(opt, anchor_map2ref, map2ref_cnt);
-        // int q = 0;
-        // for(r_i = 0; r_i < merge_anchor_cnt; ++r_i)
-		// {
-		// 	if (anchor_map2ref[r_i].strand != 3)
-		// 		q += 1;
-		// }
-        // fprintf(stderr, "[INFO] after compare GTF file, make sure total %d exon region strand\n", q);
+        IvalA = read_Annotation(opt, anchor_map2ref, map2ref_cnt, &merge_anchor_cnt);
 	}
-	else{
+	else
+    {
 		merge_anchor_cnt = load_anchor(anchor_map2ref, map2ref_cnt);
 		for (r_i = 0; r_i < merge_anchor_cnt; ++r_i)
 		{
@@ -4010,6 +4103,16 @@ void load_fasta_2pass(uint32_t map2ref_cnt, param_map *opt, char *read_fastq, in
 	if(anchor_map2ref != NULL)	free(anchor_map2ref);
 
 	if (EXON_T != NULL)	free(EXON_T);
+   
+    if (opt->with_gtf)
+    {
+        for(r_i = 0; r_i < chr_file_n; ++r_i)
+        {
+            if (IvalA[r_i].Ival != NULL) free(IvalA[r_i].Ival);
+        }
+        if (IvalA != NULL) free(IvalA);
+    }
+    
 
 	for (r_i = 0; r_i < read_in; ++r_i)
 	{

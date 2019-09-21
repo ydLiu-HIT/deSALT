@@ -7,7 +7,7 @@ import copy
 from datetime import datetime
 
 
-import cal_background
+import cal_PBsim_background
 
 # To enable importing from samscripts submodulew
 SCRIPT_PATH = os.path.dirname(os.path.realpath(__file__))
@@ -363,6 +363,8 @@ def processData(datafolder, resultfile, annotationfile, Array, SS_list, csv_path
         # Reading reference file
         [headers, seqs, quals] = read_fastq(simRefFilePath)
         simGeneName = headers[0]
+        if "transcript" in simGeneName:
+            simGeneName = simGeneName.split(':')[1]
         annotation = annotation_dict[simGeneName]       # Getting the correct annotation
 
         #---------------------
@@ -393,6 +395,7 @@ def processData(datafolder, resultfile, annotationfile, Array, SS_list, csv_path
         if maf_qname != simQName:
             # import pdb
             # pdb.set_trace()
+            print "maf_qname = %s, simQName = %s" %(maf_qname, simQName)
             raise Exception('ERROR: could not find query %s in maf file %s' % (qname, simMafFileName))
 
         # IMPORTANT: If the reads were generated from an annotation on reverse strand
@@ -484,7 +487,7 @@ def processData(datafolder, resultfile, annotationfile, Array, SS_list, csv_path
                 # sl_startpos = samline.pos - 1   # SAM positions are 1-based
                 sl_startpos = samline.pos
                 reflength = samline.CalcReferenceLengthFromCigar()
-                readlength = samline.CalcAlignedBaseFromCigar()
+                readlength = samline.CalcReadLengthFromCigar()
                 #************************
                 #************************
                 sl_endpos = sl_startpos + reflength
@@ -613,7 +616,6 @@ def verbose_usage_and_exit():
     sys.stderr.write('\t[annotationfile]: the annotations (GTF) of reference genome\n')
     sys.stderr.write('\t[grouplist]: the groups where the simulation data were simulated with different sequencing depth by PBSIM\n')
     sys.stderr.write('\t[ss_list]: the list of transcripts id of all single splicing isoforms\n')
-    sys.stderr.write('\t[as_list]: the list of transcripts id of all alternative splicing isoforms\n')
     sys.stderr.write('\t[csv_path]: the results of evaluation\n')
 
 
@@ -629,10 +631,9 @@ if __name__ == '__main__':
     annotationfile = sys.argv[3]
     group_list = sys.argv[4]
     ss_list = sys.argv[5]
-    as_list = sys.argv[6]
-    csv_path = sys.argv[7]
+    csv_path = sys.argv[6]
 
-    Array = cal_background.process(datafolder, group_list, annotationfile, ss_list, as_list)
+    Array = cal_PBsim_background.process(datafolder, group_list, annotationfile, ss_list)
 
     print "Total reads: ", Array.Total_reads
     print "Total bases: ", Array.Total_bases

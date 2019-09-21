@@ -2,71 +2,154 @@
 import os
 import datetime
 import sys
-import operator
+import random
 
 GFF_STRANDFW = '+'
 GFF_STRANDRV = '-'
 GFF_FRAME = [0, 1, 2]
-DEFAULT_ALLOWED_INACCURACY = 5
 
 class GFFLine:
     def __init__(self):
         self.seqname = ''
+        self.source = ''
         self.feature = ''
         self.start = 0
         self.end = 0
+        self.score = 0.0
         self.strand = GFF_STRANDFW
+        self.frame = 0
         self.attribute = {}
 
+class ExonItem:
+    def __init__(self):
+        self.start = 0
+        self.end = 0
 
-def Get_Annotation_by_Gene(gff_lines):
-    gene_dict = {}
-
-    gene_name = []
-
-    for line in gff_lines:
-        # print line.attribute['gene_id']
-        gene_name.append(line.attribute['gene_id'])
-    gene_name = list(set(gene_name))
-
-    for name in gene_name:
-        gene_dict[name] = []
-
-    for line in gff_lines:
-        gene_dict[line.attribute['gene_id']].append(line)
-
-
-    return gene_dict
+    def getLength(self):
+        return self.end - self.start + 1
     
+class TranscripitItem:
+    def __init__(self):
+        self.seqname = ''
+        self.genename = ''
+        self.source = ''
+        self.transcriptname = ''
+        self.strand = GFF_STRANDFW
+        self.start = -1
+        self.end = -1
+        self.exonitems = []
 
-def parse_exon_by_gene(gene_dict, path_out):
+    # Recallculate gen start and end position from exons
+    def calcBoundsFromItems(self):
+        if len(self.exonitems) == 0:
+            pass
+        else:
+            self.start = self.exonitems[0].start
+            self.end = self.exonitems[0].end
 
-    file_out = open(path_out, "w")
+            start = self.exonitems[-1].start
+            end = self.exonitems[-1].end
+
+            if self.start > start:  #decrease order
+                self.start = start
+            elif self.end < end:   #increase order
+                self.end = end
+
+
+
+def Annotation_TranscriptItem(gffline):
+    transcript = TranscripitItem()
+    transcript.seqname = gffline.seqname
+    transcript.source = gffline.source
+    transcript.start = gffline.start
+    transcript.end = gffline.end
+    transcript.strand = gffline.strand
+
+    transcript.transcriptname = gffline.attribute['transcript_id']
+    transcript.genename = gffline.attribute['gene_id']
+
+    exonitem = ExonItem()
+    exonitem.start = gffline.start
+    exonitem.end = gffline.end
+
+    transcript.exonitems.append(exonitem)
+
+    return transcript
+
+
+def Get_Transcript_Annotation(gff_lines):
+    transcripts = []
+    old_annt_name = ''
+    curr_annt = None
+    for gffline in gff_lines:
+        new_annt = Annotation_TranscriptItem(gffline)
+        new_annt_name = new_annt.transcriptname
+        if old_annt_name != new_annt_name:
+            if old_annt_name != '':
+                curr_annt.calcBoundsFromItems()
+                transcripts.append(curr_annt)
+            curr_annt = new_annt
+        else:
+            if new_annt.seqname != curr_annt.seqname or \
+                new_annt.source != curr_annt.source or \
+                new_annt.strand != curr_annt.strand or \
+                new_annt.genename != curr_annt.genename or \
+                new_annt.transcriptname != curr_annt.transcriptname:
+                raise Exception('Invalid GFF/GTF line for transcript %s' % new_annt_name)
+            assert len(new_annt.exonitems) == 1
+            curr_annt.exonitems.append(new_annt.exonitems[0])
+        
+        old_annt_name = new_annt_name
+
+    # Add the last collected annotation
+    if old_annt_name != '':
+        transcripts.append(curr_annt)
     
-    pre_processed_exons = []
-    total_exons = 0
-    for key in gene_dict.keys():
-        exon_by_gene = []
-        for line in gene_dict[key]:
-            exon_by_gene.append((line.start, line.end, line.seqname, line.strand))
-        #merge and reduplication
-        exon_by_gene = list(set(exon_by_gene))
-        exon_by_gene = sorted(exon_by_gene, key = operator.itemgetter(0,1))
+    return transcripts
 
-        pre_processed_exons.extend(exon_by_gene)
+def outPutTrans2bed(transcripts, fpath):
+    TC_exon = 0
+    TC_intron = 0
+    #out as exon pos
+    for trans in transcripts:
+        TC_exon += len(trans.exonitems)
+        TC_intron += len(trans.exonitems) - 1
 
-    pre_processed_exons = list(set(pre_processed_exons))
-    pre_processed_exons = sorted(pre_processed_exons, key = operator.itemgetter(0,1))
+    with open(fpath, 'w') as fw:
+        fw.write(str(TC_exon) + '\t' + str(TC_intron) + "\n")
+        for trans in transcripts:
+            header = "%s\t%s|%s\t%s\t%s\t" %(trans.seqname, trans.transcriptname, trans.genename, trans.strand, str(len(trans.exonitems)))
+            fw.write(header)
+            
+            for  I in trans.exonitems:
+                fw.write(str(I.start) + "," + str(I.end) + ",")
+            fw.write('\n')
+
     
-    total_exons = len(pre_processed_exons)
-    file_out.write(str(total_exons)+'\n')
-    for i in xrange(len(pre_processed_exons)):
-        file_out.write(str(pre_processed_exons[i][2]) + '\t' + str(pre_processed_exons[i][3]) + '\t' + str(pre_processed_exons[i][0]) + '\t' + str(pre_processed_exons[i][1]) + '\n')
+    ##out as intron pos
+    #for trans in transcripts:
+    #    TC += len(trans.exonitems) - 1
 
-    file_out.close()
+    #with open(fpath, 'w') as fw:
+    #    fw.write(str(TC) + "\n")
+    #    for trans in transcripts:
+    #        header = "%s\t%s\t%s\t%s|%s\t%s\t%s\t" %(trans.seqname, str(trans.start - 1), str(trans.end), trans.transcriptname, trans.genename, trans.strand, str(len(trans.exonitems) - 1))
+    #        fw.write(header)
+    #        
+    #        if len(trans.exonitems) <= 1:
+    #            fw.write("\n")
+    #            continue
+
+    #        Interval = [(trans.exonitems[i].end , trans.exonitems[i + 1].start - 1) for i in range(len(trans.exonitems) - 1)]
+    #        
+    #        for  i in range(len(Interval) - 1):
+    #            I = Interval[i]
+    #            fw.write(str(I[0]) + "," + str(I[1]) + ",")
+    #        I = Interval[len(Interval) - 1]
+    #        fw.write(str(I[0]) + "," + str(I[1]) + '\n')
 
 
-def Load_Annotation_From_GTF(filename, path_out, check_duplicates = True):
+def Load_Annotation_From_GTF(filename, fpath, check_duplicates = True):
     
     fname, ftext = os.path.splitext(filename)
     if ftext not in ['.gtf', '.gff']:
@@ -74,8 +157,8 @@ def Load_Annotation_From_GTF(filename, path_out, check_duplicates = True):
     gtffile = open(filename, 'r')
 
     gene_dict = {}
+    transcripts = []
     gff_lines = []
-    strand_dict = {"+":0, "-":1}
 
     for line in gtffile:
         elements = line.strip().split('\t')
@@ -94,61 +177,62 @@ def Load_Annotation_From_GTF(filename, path_out, check_duplicates = True):
         else:
             gffline.seqname = elements[0]
 
+        if elements[1] == '.':
+            gffline.source = ''
+        else:
+            gffline.source = elements[1]
+
         if elements[3] == '.':
             gffline.start = 0
         else:
-            gffline.start =  int(elements[3]) - 1
+            gffline.start =  int(elements[3])
 
         if elements[4] == '.':
             gffline.end = 0
         else:
-            gffline.end = int(elements[4]) - 1
+            gffline.end = int(elements[4])
 
+        if elements[5] == '.':
+            gffline.score = 0.0
+        else:
+            gffline.score = float(elements[5])
 
         if elements[6] not in [GFF_STRANDFW, GFF_STRANDRV]:
-            gffline.strand = 0
+            gffline.strand = GFF_STRANDFW
         else:
-            gffline.strand = strand_dict[elements[6]]
+            gffline.strand = elements[6]
+
+        if elements[7] not in GFF_FRAME:
+            gffline.frame = 0
+        else:
+            gffline.frame = int(elements[7])
 
         if elements[8] == '.':
             gffline.attribute = {}
         else:
             att_line = elements[8].split(';')
-            for i in xrange(len(att_line)):
+            for i in range(len(att_line)):
                 att = att_line[i].split()
                 if len(att) == 2:
                     gffline.attribute[att[0]] = att[1].strip('"') #dict for attribute
         gff_lines.append(gffline)
 
-    #get annotation by gene
-    gene_dict = Get_Annotation_by_Gene(gff_lines)
-    parse_exon_by_gene(gene_dict, path_out)
+    #get transcript
+    transcripts = Get_Transcript_Annotation(gff_lines)
 
-def print_lines(gfflines, path):
-    f = open(path, 'w')
-    for line in gfflines:
-        f.write(line.seqname+'\t'+line.source+'\t'+line.feature+'\t'+str(line.start)+'\t'+str(line.end)+'\t'+str(line.score)+'\t'+line.strand+'\t'+str(line.frame)+'\t')
-        for key in line.attribute.keys():
-            f.write(key+' '+line.attribute[key]+'; ')
-        f.write('\n')
-       
+    outPutTrans2bed(transcripts, fpath)
+
+    gtffile.close()
+
+    return transcripts
 
 
 if __name__ == '__main__':
-
-    path = sys.argv[1]
-    path_out = sys.argv[2]
+    gffpath = sys.argv[1]
+    bedpath = sys.argv[2]
 
     starttime = datetime.datetime.now()
 
-    Load_Annotation_From_GTF(path, path_out)
-
-    #f = open(path1, 'w')
-
-    #for trans in transcripts:
-    #    f.write(trans.transcriptname+'\t'+str(trans.start)+'\t'+str(trans.end)+'\n')
+    transcripts = Load_Annotation_From_GTF(gffpath, bedpath)
 
     endtime = datetime.datetime.now()
-
-    print "run time: ", (endtime - starttime).seconds
-    # print_lines(gfflines, path1)

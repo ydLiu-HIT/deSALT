@@ -4,7 +4,7 @@ deSALT - De Bruijn graph-based Spliced Aligner for Long Transcriptome reads
 ![deSALT](https://github.com/ydLiu-HIT/deSALT/blob/master/img/deSALT_fig.png)
 
 ## Getting started
-    git clone https://github.com/ydLiu-HIT/deSALT.git (git clone https://github.com/hitbc/deSALT.git)
+    git clone --recursive https://github.com/ydLiu-HIT/deSALT.git (git clone https://github.com/hitbc/deSALT.git)
     cd deSALT/src/deBGA-master/
     make   ## built deBGA for RdBG-index
     cd ..
