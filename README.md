@@ -4,7 +4,7 @@ deSALT - De Bruijn graph-based Spliced Aligner for Long Transcriptome reads
 ![deSALT](https://github.com/ydLiu-HIT/deSALT/blob/master/img/deSALT_fig.png)
 
 ## Getting started
-    git clone https://github.com/ydLiu-HIT/deSALT.git (git clone https://github.com/hitbc/deSALT.git)
+    git clone --recursive https://github.com/ydLiu-HIT/deSALT.git (git clone https://github.com/hitbc/deSALT.git)
     cd deSALT/src/deBGA-master/
     make   ## built deBGA for RdBG-index
     cd ..
@@ -72,7 +72,7 @@ Algorithm options:
 	-p --e-shift          [INT]	The number of downstream (upstream) exons will be processed when left (right) extension. [5]
 	-T --trans-strand               Find splicing sites in transcript strand.
     	-G --gtf              [STR]	Provided an annotation file for precise intron donor and acceptor sites.
-    	                           	The version information of annotation file and reference genome must the same!
+    	                           	Convert to fixed format of deSALT by Annotation_Load.py
 	-x --read-type        [STR]	Specifiy the type of reads and set multiple paramters unless overriden.
 	                           	[null] default parameters. error rate 13% 
 	                           	ccs (PacBio SMRT CCS reads): error rate 1%
@@ -143,12 +143,18 @@ deSAL aln -f tmp_path1 -o out1.sam index_route read1.fq   #the first deSALT prog
 deSAL aln -f tmp_path2 -o out2.sam index_route read2.fq   #the second deSALT program
 ```
 
+### 5. Alignment with annotations
+'''
+python Annotation_Load.py genome.gtf genome.info
+deSALT aln -G genome.info index_route read.fa
+'''
+
 ## Simulation benchmarking
 In the simulation study, we simulated 36 RNA-seq long read datasets with various sequencing error rates and read lengths (refers to supplementary) to mimic the datasets from various platforms, i.e., ONT 1D reads (error rate: 25%, mean read length: 7800 bp), ONT 2D reads (error rate: 12%, mean read length: 7800 bp), PacBio subreads (error rate: 15%, mean read length: 8000 bp) and PacBio ROI reads (error rate: 2%, mean read length: 2000 bp). For each of the platforms, there are respectively 9 datasets from 3 species (human, mouse and fruitfly) and in 3 sequencing depths (4X, 10X, and 30X). All the datasets were produced by PBSim based on Ensembl gene annotations (human: GRCh38, version 94, mouse: GRCm38, version 94 and fruitfly: BDGP6, version 94).
 
 Due to there is no well-studied simulator for noisy long RNA-seq reads, we used PBSIM to generate synthetic datasets by a set of transcripts generated from a particular reference genome and corresponding annotations inspired by RNAseqEval project (https://github.com/kkrizanovic/RNAseqEval). Detailed description of synthetic dataset preparation can be found at https://github.com/ydLiu-HIT/deSALT/blob/master/simulation/Sim_data_generation.md.
 
-The simulated datasets and description used for benchmarking are available at https://drive.google.com/drive/folders/16RpDYkdTCwOHmvoWNehnUp7nxrNt_Q7T?usp=sharing
+The simulated datasets and description used for benchmarking are available at https://drive.google.com/drive/folders/1jk1ddv_QGozumnO_S_f-1lJlOehL3SyW?usp=sharing
 
 ## Evaluation on simulated and real datasets
 For synthetic dataset, deSALT compares the alignment files (SAM or BAM) to the simulation data generation by PBSIM which have ground truth. In order to reveal the performance of aligners, we take the potential structure of simulation data into consideration and evaluate the results from four aspects. Detailed description of synthetic dataset evaluation can be found at https://github.com/ydLiu-HIT/deSALT/blob/master/evaluation/data_evaluation.md
@@ -160,6 +166,11 @@ bioRxiv 612176; doi: https://doi.org/10.1101/612176
 
 ## Contact
 For advising, bug reporting and requiring help, please post on GitHub Issue or contact ydliu@hit.edu.cn.
+
+## Thanks
+deSALT relies on the hard work of other projects:
+    - The reference de bruijn graph index(RdBG-index):https://github.com/HongzheGuo/deBGA
+    -  Dynamic programming in the second phase:https://github.com/lh3/ksw2
 
 ## Reference
 [1] Weirather JL et al. Comprehensive comparison of Pacific Biosciences and Oxford Nanopore Technologies and their applications to transcriptome analysis. F1000Res (2017), 6: 100. 
