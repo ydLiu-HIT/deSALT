@@ -91,6 +91,7 @@ Scoring options:
 	-z --zdrop            [INT(,INT)]
 					Z-drop score for splice/non-splice alignment. [400]
 	-w --band-width       [INT]    	Bandwidth used in chaining and DP-based alignment. [500]
+    -R --noncan           [INT]     Penalty score for non-canonical splice junction sites. [9]
 
 Output options:
 

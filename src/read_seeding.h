@@ -31,6 +31,7 @@
 #define SECONDARY_TO_PRIMARY 0.9
 #define E_SHIFT 5
 #define STRAND_DIFF 20
+#define NONCAN 9
 #define MIN_CHAIN_SCORE 20
 #define MAX_READ_JOIN_GAP 2000
 #define BATCH_SIZE 100000
