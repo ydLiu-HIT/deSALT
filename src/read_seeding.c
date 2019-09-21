@@ -82,7 +82,6 @@ static void init_map_param(param_map *opt)
 	opt->error_ins = 0.36;
 	opt->error_del = 0.31;
 
-	opt->simulated = 0;
 	opt->secondary_ratio = 0.9;
 	opt->min_chain_score = 30;
     opt->strand_diff = 20;
@@ -1362,8 +1361,8 @@ static int aln_usage(void)
 	fprintf(stderr, "    -p --secondary-ratio  [FLOAT]  Min secondary-to-primary score ratio. [%.2f]\n", SECONDARY_TO_PRIMARY);
     fprintf(stderr, "    -e --e-shift          [INT]    The number of downstream (upstream) exons will be processed when left (right) extension. [%u]\n", E_SHIFT);
     fprintf(stderr, "    -T --trans-strand              Find splicing site according to transcript strand\n");
-    fprintf(stderr, "    -G --gtf              [STR]    Provided an annotation file for precise intron donor and acceptor sites.\n");
-    fprintf(stderr, "                                   The release of annotation file and reference genome must the same!\n");
+    fprintf(stderr, "    -G --annotation       [STR]    Provided annotation information for precise intron donor and acceptor sites.\n");
+    fprintf(stderr, "                                   Convert to fixed format of deSALT by Annotation_Load.py \n");
 	fprintf(stderr, "    -x --read-type        [STR]    Specifiy the type of reads and set multiple paramters unless overriden.\n");
 	fprintf(stderr, "                                   [null] default parameters.\n");
 	fprintf(stderr, "                                   ccs (PacBio SMRT CCS reads): error rate 1%%\n");
@@ -1428,8 +1427,8 @@ int help_usage()
 	fprintf(stderr, "    -p --secondary-ratio  [FLOAT]  Min secondary-to-primary score ratio. [%.2f]\n", SECONDARY_TO_PRIMARY);
     fprintf(stderr, "    -e --e-shift          [INT]    The number of downstream (upstream) exons will be processed when left (right) extension. [%u]\n", E_SHIFT);
     fprintf(stderr, "    -T --trans-strand              Find splicing sites according to transcript strand\n");
-    fprintf(stderr, "    -G --gtf              [STR]    Provided an annotation file for precise intron donor and acceptor sites.\n");
-    fprintf(stderr, "                                   The release of annotation file and reference genome must the same!\n");
+    fprintf(stderr, "    -G --annotation       [STR]    Provided annotation information for precise intron donor and acceptor sites.\n");
+    fprintf(stderr, "                                   Convert to fixed format of deSALT by Annotation_Load.py \n");
 	fprintf(stderr, "    -x --read-type        [STR]    Specifiy the type of reads and set multiple paramters unless overriden.\n");
 	fprintf(stderr, "                                   [null] default parameters.\n");
 	fprintf(stderr, "                                   ccs (PacBio SMRT CCS reads): error rate 1%%\n");
@@ -1544,7 +1543,7 @@ int desalt_aln(int argc, char *argv[], const char *version)
 			case 'f': opt->temp_file_perfix = strdup(optarg); break;
 			case 'Q': opt->with_qual = 0; break;
             case 'T': opt->transcript_strand = 1; break;
-            case 'G': opt->gtf_path = strdup(optarg); opt->with_gtf = 1; break;
+            case 'G': opt->anno_path = strdup(optarg); opt->with_gtf = 1; break;
 			case 'o': opt->sam_path = strdup(optarg); break;
 			case 'h': return aln_usage(); break;
 			case 'x': if (strcmp(optarg, "ccs") == 0) opt->read_type = 1;
@@ -1608,39 +1607,9 @@ int desalt_aln(int argc, char *argv[], const char *version)
         exit(1);
 	}
 
-    if (opt->with_gtf)
-    {
-		fprintf(stderr, "[Param-INFO] deSALT parameters:index-kmer:%d\tseed-kmer:%d\thash-kmer:%d\tthread:%d\tstrand_diff:%d\twith GTF\n", opt->k_t, opt->seed_k_t, opt->hash_kmer, opt->thread_n, opt->strand_diff);
-        //get the folder of deSALT
-        char dir[1024];
-        char desalt_dir[1024];
-        char path_anno_load[1024];
-        int r;
-        r = readlink("/proc/self/exe", dir, 2048);
-        if (r < 0 || r >= 2048)
-            fprintf(stderr, "Failed\n");
-        dir[r] = '\0';
-
-        if (!get_bin_dir(dir, desalt_dir))
-        {
-            strcat(desalt_dir, "/");
-        }
-
-        strcpy(path_anno_load, desalt_dir);
-        strcat(path_anno_load, "Annotation_Load.py");
-        opt->anno_load_script = strdup(path_anno_load);
-        //strcpy(opt->anno_load_script, path_anno_load);
-        if ((access(path_anno_load, F_OK)) == -1)
-        {    
-            fprintf(stderr, "[Wrong]: %s is not exist, please check!\n", path_anno_load);
-            exit(1);
-        }
-    }else
-	{
-		fprintf(stderr, "[Param-INFO] deSALT parameters:index-kmer:%d\tseed-kmer:%d\thash-kmer:%d\tthread:%d\tstrand_diff:%d\tidentify junction:%s\n", opt->k_t, opt->seed_k_t, opt->hash_kmer, opt->thread_n, opt->strand_diff, (opt->transcript_strand)? "transcript strand": "both_strand");
-	}
+    
+	fprintf(stderr, "[Param-INFO] deSALT parameters:index-kmer:%d\tseed-kmer:%d\thash-kmer:%d\tthread:%d\tstrand_diff:%d\tidentify junction:%s\n", opt->k_t, opt->seed_k_t, opt->hash_kmer, opt->thread_n, opt->strand_diff, (opt->transcript_strand)? "transcript strand": "both_strand");
 	
-
 	char *index_dir;
 	char *read_fastq;
 	index_dir = strdup(argv[optind + 1]);
@@ -1655,14 +1624,9 @@ int desalt_aln(int argc, char *argv[], const char *version)
 	memset(temp_binary_pos, 0, 1024);
     if (opt->temp_file_perfix == NULL)
     {
-        //opt->temp_file_perfix = strdup("1pass_anchor");
         strcpy(temp_anchor_dir, "./skeletons.lines");
-        //strcat(temp_anchor_dir, opt->temp_file_perfix);
-        //strcat(temp_anchor_dir, "skeletons.lines");
 
         strcpy(temp_binary_pos, "./skeletons.pos");
-        //strcat(temp_binary_pos, opt->temp_file_perfix);
-    	//strcat(temp_binary_pos, "skeletons.pos");
     }
     else
     {

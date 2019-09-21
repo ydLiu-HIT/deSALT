@@ -31,4 +31,6 @@ int compare_fillseed(const void *a, const void *b);
 int compare_anchor(const void *a, const void *b);
 
 int compare_exon(const void *a, const void *b);
+
+int compare_intron(const void *a, const void *b);
 #endif

@@ -322,6 +322,26 @@ int compare_anchor(const void *a, const void *b)
     }
 }
 
+int compare_intron(const void *a, const void *b)
+{
+    Ival_anno_t* intron1 = (Ival_anno_t* )a;
+    Ival_anno_t* intron2 = (Ival_anno_t* )b;
+
+    if (intron1->Is > intron2->Is)
+        return 1;
+    else if (intron1->Is < intron2->Is)
+        return -1;
+    else
+    {
+        if (intron1->Ie > intron2->Ie)
+            return 1;
+        else if (intron1->Ie < intron2->Ie)
+            return -1;
+        else
+            return 0;
+    }
+}
+
 int compare_exon(const void *a, const void *b)
 {
     Anno_t* exon1 = (Anno_t* )a;
@@ -340,6 +360,7 @@ int compare_exon(const void *a, const void *b)
         else
             return 0;
     }
+   
 }
 
 

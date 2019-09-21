@@ -52,10 +52,10 @@ python ../tran_qname.py dataset_sim_dm_CCS_g2.fastq SimG2_S g2.fastq
 mv g2.fastq dataset_sim_dm_CCS_g2.fastq
 python ../tran_qname.py dataset_sim_dm_CCS_g3.fastq SimG3_S g3.fastq
 mv g3.fastq dataset_sim_dm_CCS_g3.fastq
-
+#
 rm group1/*.fastq
 rm group2/*.fastq
 rm group3/*.fastq
-
-
+#
+#
 cat dataset_sim_dm_CCS_g1.fastq dataset_sim_dm_CCS_g2.fastq dataset_sim_dm_CCS_g3.fastq > dataset_sim_dm_CCS.fastq
