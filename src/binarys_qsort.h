@@ -11,7 +11,7 @@ int multi_binsearch_offset(uint32_t x, uint32_t v[], int64_t n, uint32_t offset,
 #endif
 
 
-int binsearch_range(uint64_t key, uint32_t *v, int64_t n, int64_t *range, uint8_t k_off);
+int binsearch_range(uint64_t key, uint32_t *v, int64_t n, int64_t *range, int8_t k_off);
 
 //seed_id_r = binsearch_interval_unipath64(kmer_pos_uni, buffer_seqf, result_seqf);
 int64_t binsearch_interval_unipath64(uint64_t x, uint64_t v[], uint64_t n);

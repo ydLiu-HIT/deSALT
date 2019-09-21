@@ -2842,145 +2842,222 @@ static int align_core(void *km, TARGET_t *anchor_map2ref, uint32_t read_line, ui
 		int key_total = key_r - key_l + 1;
 		TARGET_t *target_tmp_FOR = (TARGET_t* )malloc(key_total * sizeof(TARGET_t));
 		TARGET_t *target_tmp_REV = (TARGET_t* )malloc(key_total * sizeof(TARGET_t));
-		if (anchor_map2ref[key1].strand == 0 && anchor_map2ref[key2].strand == 0 && anchor_map2ref[(key2+key1)>>1].strand == 0)
-		{
-			// fprintf(stderr, "froward\n");
-			for(i = key_l; i <= key_r; ++i)
-			{
-				target_tmp_FOR[i - key_l].ts = EXON_T[i].ts_f;
-				target_tmp_FOR[i - key_l].te = EXON_T[i].te_f;
-			}
-			for (i = 0; i < anchor_n_new; ++i)
-			{
-				key = ref_temp[i].key - key_l;
-				ref_temp[i].ts = target_tmp_FOR[key].ts;
-				ref_temp[i].te = target_tmp_FOR[key].te;
-				ref_temp[i].key = key;
-			}
-
-			align_core_primary(km, seqlen, target_tmp_FOR, qseq0, qual0, &aln[0], opt, ez, ez2, ref_pos, ref_temp, query_pos, &chr_n, anchor_n_new, strand, tid, key_total, MM_F_SPLICE_FOR, left_bound, right_bound);
-			
-			if (aln[0].dp_score <= 0)
-			{
-				free(ref_temp);
-				free(target_tmp_FOR);
-				free(target_tmp_REV);
-				return 1;
-			}
-            for(i = 0; i < anchor_n_new; ++i)
+        uint8_t direct_RNA = opt->transcript_strand;
+        if (!direct_RNA)
+        {
+            if (anchor_map2ref[key1].strand == 0 && anchor_map2ref[key2].strand == 0 && anchor_map2ref[(key2+key1)>>1].strand == 0)
             {
-                key = ref_temp[i].key + key_l;
-                if (strand_arr[tid][key] != 1)
-                    strand_arr[tid][key] = 0;
-                else
-                    strand_arr[tid][key] = 3;
+                // fprintf(stderr, "froward\n");
+                for(i = key_l; i <= key_r; ++i)
+                {
+                    target_tmp_FOR[i - key_l].ts = EXON_T[i].ts_f;
+                    target_tmp_FOR[i - key_l].te = EXON_T[i].te_f;
+                }
+                for (i = 0; i < anchor_n_new; ++i)
+                {
+                    key = ref_temp[i].key - key_l;
+                    ref_temp[i].ts = target_tmp_FOR[key].ts;
+                    ref_temp[i].te = target_tmp_FOR[key].te;
+                    ref_temp[i].key = key;
+                }
+
+                align_core_primary(km, seqlen, target_tmp_FOR, qseq0, qual0, &aln[0], opt, ez, ez2, ref_pos, ref_temp, query_pos, &chr_n, anchor_n_new, strand, tid, key_total, MM_F_SPLICE_FOR, left_bound, right_bound);
+                
+                if (aln[0].dp_score <= 0)
+                {
+                    free(ref_temp);
+                    free(target_tmp_FOR);
+                    free(target_tmp_REV);
+                    return 1;
+                }
+                for(i = 0; i < anchor_n_new; ++i)
+                {
+                    key = ref_temp[i].key + key_l;
+                    if (strand_arr[tid][key] != 1)
+                        strand_arr[tid][key] = 0;
+                    else
+                        strand_arr[tid][key] = 3;
+                }
+                which_strand = 0;
             }
-			which_strand = 0;
-		}
-		else if (anchor_map2ref[key1].strand == 1 && anchor_map2ref[key2].strand == 1 && anchor_map2ref[(key2+key1)>>1].strand == 1)
-		{
-			// fprintf(stderr, "reverse\n");
-			for(i = key_l; i <= key_r; ++i)
-			{
-				target_tmp_REV[i - key_l].ts = EXON_T[i].ts_r;
-				target_tmp_REV[i - key_l].te = EXON_T[i].te_r;
-			}
-			for (i = 0; i < anchor_n_new; ++i)
-			{
-				key = ref_temp[i].key - key_l;
-				ref_temp[i].ts = target_tmp_REV[key].ts;
-				ref_temp[i].te = target_tmp_REV[key].te;
-				ref_temp[i].key = key;
-			}
-			align_core_primary(km, seqlen, target_tmp_REV, qseq0, qual0, &aln[1], opt, ez, ez2, ref_pos, ref_temp, query_pos, &chr_n, anchor_n_new, strand, tid, key_total, MM_F_SPLICE_REV, left_bound, right_bound);
-			
-			if (aln[1].dp_score <= 0)
-			{
-				free(ref_temp);
-				free(target_tmp_FOR);
-				free(target_tmp_REV);
-				return 1;
-			}
-            for(i = 0; i < anchor_n_new; ++i)
+            else if (anchor_map2ref[key1].strand == 1 && anchor_map2ref[key2].strand == 1 && anchor_map2ref[(key2+key1)>>1].strand == 1)
             {
-                key = ref_temp[i].key + key_l;
-                if (strand_arr[tid][key] != 0)
-                    strand_arr[tid][key] = 1;
-                else
-                    strand_arr[tid][key] = 3;
+                // fprintf(stderr, "reverse\n");
+                for(i = key_l; i <= key_r; ++i)
+                {
+                    target_tmp_REV[i - key_l].ts = EXON_T[i].ts_r;
+                    target_tmp_REV[i - key_l].te = EXON_T[i].te_r;
+                }
+                for (i = 0; i < anchor_n_new; ++i)
+                {
+                    key = ref_temp[i].key - key_l;
+                    ref_temp[i].ts = target_tmp_REV[key].ts;
+                    ref_temp[i].te = target_tmp_REV[key].te;
+                    ref_temp[i].key = key;
+                }
+                align_core_primary(km, seqlen, target_tmp_REV, qseq0, qual0, &aln[1], opt, ez, ez2, ref_pos, ref_temp, query_pos, &chr_n, anchor_n_new, strand, tid, key_total, MM_F_SPLICE_REV, left_bound, right_bound);
+                
+                if (aln[1].dp_score <= 0)
+                {
+                    free(ref_temp);
+                    free(target_tmp_FOR);
+                    free(target_tmp_REV);
+                    return 1;
+                }
+                for(i = 0; i < anchor_n_new; ++i)
+                {
+                    key = ref_temp[i].key + key_l;
+                    if (strand_arr[tid][key] != 0)
+                        strand_arr[tid][key] = 1;
+                    else
+                        strand_arr[tid][key] = 3;
+                }
+                which_strand = 1;
             }
-			which_strand = 1;
-		}
-		else //have not been detected
-		{
-			for(i = key_l; i <= key_r; ++i)
-			{
-				target_tmp_FOR[i - key_l].ts = EXON_T[i].ts_f;
-				target_tmp_FOR[i - key_l].te = EXON_T[i].te_f;
-			}
+            else //have not been detected
+            {
+                for(i = key_l; i <= key_r; ++i)
+                {
+                    target_tmp_FOR[i - key_l].ts = EXON_T[i].ts_f;
+                    target_tmp_FOR[i - key_l].te = EXON_T[i].te_f;
+                }
 
-			for (i = 0; i < anchor_n_new; ++i)
-			{
-				key = ref_temp[i].key - key_l;
-				ref_temp[i].ts = target_tmp_FOR[key].ts;
-				ref_temp[i].te = target_tmp_FOR[key].te;
-				ref_temp[i].key = key;
-			}
-			align_core_primary(km, seqlen, target_tmp_FOR, qseq0, qual0, &aln[0], opt, ez, ez2, ref_pos, ref_temp, query_pos, &chr_n, anchor_n_new, strand, tid, key_total, MM_F_SPLICE_FOR, left_bound, right_bound);
+                for (i = 0; i < anchor_n_new; ++i)
+                {
+                    key = ref_temp[i].key - key_l;
+                    ref_temp[i].ts = target_tmp_FOR[key].ts;
+                    ref_temp[i].te = target_tmp_FOR[key].te;
+                    ref_temp[i].key = key;
+                }
+                align_core_primary(km, seqlen, target_tmp_FOR, qseq0, qual0, &aln[0], opt, ez, ez2, ref_pos, ref_temp, query_pos, &chr_n, anchor_n_new, strand, tid, key_total, MM_F_SPLICE_FOR, left_bound, right_bound);
 
-			//reverse
-			for(i = key_l; i <= key_r; ++i)
-			{
-				target_tmp_REV[i - key_l].ts = EXON_T[i].ts_r;
-				target_tmp_REV[i - key_l].te = EXON_T[i].te_r;
-			}
+                //reverse
+                for(i = key_l; i <= key_r; ++i)
+                {
+                    target_tmp_REV[i - key_l].ts = EXON_T[i].ts_r;
+                    target_tmp_REV[i - key_l].te = EXON_T[i].te_r;
+                }
 
-			for (i = 0; i < anchor_n_new; ++i)
-			{
-				ref_temp[i].ts = target_tmp_REV[ref_temp[i].key].ts;
-				ref_temp[i].te = target_tmp_REV[ref_temp[i].key].te;
-			}
+                for (i = 0; i < anchor_n_new; ++i)
+                {
+                    ref_temp[i].ts = target_tmp_REV[ref_temp[i].key].ts;
+                    ref_temp[i].te = target_tmp_REV[ref_temp[i].key].te;
+                }
 
-			align_core_primary(km, seqlen, target_tmp_REV, qseq0, qual0, &aln[1], opt, ez, ez2, ref_pos, ref_temp, query_pos, &chr_n, anchor_n_new, strand, tid, key_total, MM_F_SPLICE_REV, left_bound, right_bound);
+                align_core_primary(km, seqlen, target_tmp_REV, qseq0, qual0, &aln[1], opt, ez, ez2, ref_pos, ref_temp, query_pos, &chr_n, anchor_n_new, strand, tid, key_total, MM_F_SPLICE_REV, left_bound, right_bound);
 
-			which_strand = (aln[0].dp_score < aln[1].dp_score)? 1:0;
-			if (aln[which_strand].dp_score <= 0)
-			{
-				free(ref_temp);
-				free(target_tmp_FOR);
-				free(target_tmp_REV);
-				return 1;
-			}
-			//update anchor_map2ref
-			int gap = opt->gap_open_D + opt->gap_ex_D;
-			int thre = opt->strand_diff;
-            //int thre = 30;
-			if ((aln[which_strand].dp_score - aln[1 - which_strand].dp_score) > thre)
-			{
-				if (which_strand)
-				{
-                    for (i = 0; i < anchor_n_new; ++i)
-					{
-                        key = ref_temp[i].key + key_l;
-						if (strand_arr[tid][key] != 0)
-							strand_arr[tid][key] = 1;
-						else
-							strand_arr[tid][key] = 3;
-					}
-				}
-				else
-				{
-                    for (i = 0; i < anchor_n_new; ++i)
-					{
-                        key = ref_temp[i].key + key_l;
-						if (strand_arr[tid][key] != 1)
-							strand_arr[tid][key] = 0;
-						else
-							strand_arr[tid][key] = 3;
-					}
-				}
-			}
-		}
+                which_strand = (aln[0].dp_score < aln[1].dp_score)? 1:0;
+                if (aln[which_strand].dp_score <= 0)
+                {
+                    free(ref_temp);
+                    free(target_tmp_FOR);
+                    free(target_tmp_REV);
+                    return 1;
+                }
+                //update anchor_map2ref
+                int gap = opt->gap_open_D + opt->gap_ex_D;
+                int thre = opt->strand_diff;
+                //int thre = 30;
+                //
+                if ((aln[which_strand].dp_score - aln[1 - which_strand].dp_score) > thre)
+                {
+                    if (which_strand)
+                    {
+                        for (i = 0; i < anchor_n_new; ++i)
+                        {
+                            key = ref_temp[i].key + key_l;
+                            if (strand_arr[tid][key] != 0)
+                                strand_arr[tid][key] = 1;
+                            else
+                                strand_arr[tid][key] = 3;
+                        }
+                    }
+                    else
+                    {
+                        for (i = 0; i < anchor_n_new; ++i)
+                        {
+                            key = ref_temp[i].key + key_l;
+                            if (strand_arr[tid][key] != 1)
+                                strand_arr[tid][key] = 0;
+                            else
+                                strand_arr[tid][key] = 3;
+                        }
+                    }
+                }
+            }
+        }
+        else
+        {
+            int flag = strand? MM_F_SPLICE_REV : MM_F_SPLICE_FOR;
+            if (flag & MM_F_SPLICE_FOR)
+            {
+                for(i = key_l; i <= key_r; ++i)
+                {
+                    target_tmp_FOR[i - key_l].ts = EXON_T[i].ts_f;
+                    target_tmp_FOR[i - key_l].te = EXON_T[i].te_f;
+                }
+                for (i = 0; i < anchor_n_new; ++i)
+                {
+                    key = ref_temp[i].key - key_l;
+                    ref_temp[i].ts = target_tmp_FOR[key].ts;
+                    ref_temp[i].te = target_tmp_FOR[key].te;
+                    ref_temp[i].key = key;
+                }
+
+                align_core_primary(km, seqlen, target_tmp_FOR, qseq0, qual0, &aln[0], opt, ez, ez2, ref_pos, ref_temp, query_pos, &chr_n, anchor_n_new, strand, tid, key_total, MM_F_SPLICE_FOR, left_bound, right_bound);
+                
+                if (aln[0].dp_score <= 0)
+                {
+                    free(ref_temp);
+                    free(target_tmp_FOR);
+                    free(target_tmp_REV);
+                    return 1;
+                }
+                for(i = 0; i < anchor_n_new; ++i)
+                {
+                    key = ref_temp[i].key + key_l;
+                    if (strand_arr[tid][key] != 1)
+                        strand_arr[tid][key] = 0;
+                    else
+                        strand_arr[tid][key] = 3;
+                }
+                which_strand = 0;
+            }
+            else
+            {
+                for(i = key_l; i <= key_r; ++i)
+                {
+                    target_tmp_REV[i - key_l].ts = EXON_T[i].ts_r;
+                    target_tmp_REV[i - key_l].te = EXON_T[i].te_r;
+                }
+                for (i = 0; i < anchor_n_new; ++i)
+                {
+                    key = ref_temp[i].key - key_l;
+                    ref_temp[i].ts = target_tmp_REV[key].ts;
+                    ref_temp[i].te = target_tmp_REV[key].te;
+                    ref_temp[i].key = key;
+                }
+                align_core_primary(km, seqlen, target_tmp_REV, qseq0, qual0, &aln[1], opt, ez, ez2, ref_pos, ref_temp, query_pos, &chr_n, anchor_n_new, strand, tid, key_total, MM_F_SPLICE_REV, left_bound, right_bound);
+                
+                if (aln[1].dp_score <= 0)
+                {
+                    free(ref_temp);
+                    free(target_tmp_FOR);
+                    free(target_tmp_REV);
+                    return 1;
+                }
+                for(i = 0; i < anchor_n_new; ++i)
+                {
+                    key = ref_temp[i].key + key_l;
+                    if (strand_arr[tid][key] != 0)
+                        strand_arr[tid][key] = 1;
+                    else
+                        strand_arr[tid][key] = 3;
+                }
+                which_strand = 1; 
+            }
+        }
+		
 		aln[which_strand].chr_n = chr_n;
 		uint32_t chr_begin = chr_end_n[chr_n - 1];
 		aln[which_strand]._1_based_pos = aln[which_strand]._1_based_pos - chr_begin + 1 + 1; // change to 1_based pos
