@@ -17,14 +17,14 @@
 #ifdef KSW_CPU_DISPATCH
 #ifdef __SSE4_1__
 void ksw_exts2_sse41(void *km, int qlen, const uint8_t *query, int tlen, const uint8_t *target, int8_t m, const int8_t *mat,
-				   int8_t q, int8_t e, int8_t q2, int8_t noncan, int zdrop, int flag, ksw_extz_t *ez, uint8_t *junc)
+				   int8_t q, int8_t e, int8_t q2, int8_t noncan, int zdrop, int flag, ksw_extz_t *ez)
 #else
 void ksw_exts2_sse2(void *km, int qlen, const uint8_t *query, int tlen, const uint8_t *target, int8_t m, const int8_t *mat,
-				   int8_t q, int8_t e, int8_t q2, int8_t noncan, int zdrop, int flag, ksw_extz_t *ez, uint8_t *junc)
+				   int8_t q, int8_t e, int8_t q2, int8_t noncan, int zdrop, int flag, ksw_extz_t *ez)
 #endif
 #else
 void ksw_exts2_sse(void *km, int qlen, const uint8_t *query, int tlen, const uint8_t *target, int8_t m, const int8_t *mat,
-				   int8_t q, int8_t e, int8_t q2, int8_t noncan, int zdrop, int flag, ksw_extz_t *ez, uint8_t *junc)
+				   int8_t q, int8_t e, int8_t q2, int8_t noncan, int zdrop, int flag, ksw_extz_t *ez)
 #endif // ~KSW_CPU_DISPATCH
 {
 #define __dp_code_block1 \
@@ -72,7 +72,6 @@ void ksw_exts2_sse(void *km, int qlen, const uint8_t *query, int tlen, const uin
 	sc_mch_ = _mm_set1_epi8(mat[0]);
 	sc_mis_ = _mm_set1_epi8(mat[1]);
 	sc_N_   = _mm_set1_epi8(-e);
-    //sc_N_   = mat[m*m-1] == 0? _mm_set1_epi8(-e) : _mm_set1_epi8(mat[m*m-1]);
 	m1_     = _mm_set1_epi8(m - 1); // wildcard
 
 	tlen_ = (tlen + 15) / 16;
@@ -89,24 +88,40 @@ void ksw_exts2_sse(void *km, int qlen, const uint8_t *query, int tlen, const uin
 		++long_thres;
 	long_diff = long_thres * e - (q2 - q);
 
+	// fprintf(stderr, "now ok 1\n");
+
 	mem = (uint8_t*)kcalloc(km, tlen_ * 9 + qlen_ + 1, 16);
+	// fprintf(stderr, "now ok 2\n");
 	u = (__m128i*)(((size_t)mem + 15) >> 4 << 4); // 16-byte aligned
+	// fprintf(stderr, "now ok 3\n");
 	v = u + tlen_, x = v + tlen_, y = x + tlen_, x2 = y + tlen_;
+	// fprintf(stderr, "now ok 4\n");
 	donor = x2 + tlen_, acceptor = donor + tlen_;
+	// fprintf(stderr, "now ok 5\n");
 	s = acceptor + tlen_, sf = (uint8_t*)(s + tlen_), qr = sf + tlen_ * 16;
+	// fprintf(stderr, "now ok 6\n");
 	memset(u,  -q - e,  tlen_ * 16 * 4); // this set u, v, x, y (because they are in the same array)
+	// fprintf(stderr, "now ok 7\n");
 	memset(x2, -q2,     tlen_ * 16);
+	// fprintf(stderr, "now ok 8\n");
 	if (!approx_max) {
 		H = (int32_t*)kmalloc(km, tlen_ * 16 * 4);
 		for (t = 0; t < tlen_ * 16; ++t) H[t] = KSW_NEG_INF;
 	}
+	// fprintf(stderr, "now ok 9\n");
 	if (with_cigar) {
+		// fprintf(stderr, "now ok 10\n");
+		// fprintf(stderr, "qlen = %d, tlen = %d, n_col = %d, total = %d\n", qlen, tlen, n_col_, ((qlen + tlen - 1) * n_col_ + 1) * 16);
 		mem2 = (uint8_t*)kmalloc(km, ((qlen + tlen - 1) * n_col_ + 1) * 16);
-        //mem2 = (uint8_t*)kmalloc(km, ((size_t)(qlen + tlen - 1) * n_col_ + 1) * 16);
+		// fprintf(stderr, "now ok 11\n");
 		p = (__m128i*)(((size_t)mem2 + 15) >> 4 << 4);
+		// fprintf(stderr, "now ok 12\n");
 		off = (int*)kmalloc(km, (qlen + tlen - 1) * sizeof(int) * 2);
+		// fprintf(stderr, "now ok 13\n");
 		off_end = off + qlen + tlen - 1;
+		// fprintf(stderr, "now ok 14\n");
 	}
+	// fprintf(stderr, "now ok 11\n");
 
 	for (t = 0; t < qlen; ++t) qr[t] = query[qlen - 1 - t];
 	memcpy(sf, target, tlen);
@@ -115,76 +130,22 @@ void ksw_exts2_sse(void *km, int qlen, const uint8_t *query, int tlen, const uin
 	if (flag & (KSW_EZ_SPLICE_FOR|KSW_EZ_SPLICE_REV)) {
 		int semi_cost = flag&KSW_EZ_SPLICE_FLANK? -noncan/2 : 0; // GTr or yAG is worth 0.5 bit; see PMID:18688272
 		memset(donor, -noncan, tlen_ * 16);
+		for (t = 0; t < tlen - 4; ++t) {
+			int can_type = 0; // type of canonical site: 0=none, 1=GT/AG only, 2=GTr/yAG
+			if ((flag & KSW_EZ_SPLICE_FOR) && target[t+1] == 2 && target[t+2] == 3) can_type = 1; // GTr...
+			if ((flag & KSW_EZ_SPLICE_REV) && target[t+1] == 1 && target[t+2] == 3) can_type = 1; // CTr...
+			if (can_type && (target[t+3] == 0 || target[t+3] == 2)) can_type = 2;
+			if (can_type) ((int8_t*)donor)[t] = can_type == 2? 0 : semi_cost;
+		}
 		memset(acceptor, -noncan, tlen_ * 16);
-        if(!(flag & KSW_EZ_REV_CIGAR))
-        {
-            for (t = 0; t < tlen - 4; ++t) {
-                int can_type = 0; // type of canonical site: 0=none, 1=GT/AG only, 2=GTr/yAG
-                if ((flag & KSW_EZ_SPLICE_FOR) && target[t+1] == 2 && target[t+2] == 3) can_type = 1; // GTr...
-                if ((flag & KSW_EZ_SPLICE_REV) && target[t+1] == 1 && target[t+2] == 3) can_type = 1; // CTr...
-                if (can_type && (target[t+3] == 0 || target[t+3] == 2)) can_type = 2;
-                if (can_type) ((int8_t*)donor)[t] = can_type == 2? 0 : semi_cost;
-            }
-            if (junc)
-            {
-                for (t = 0; t < tlen - 1; ++t)
-                {
-                    if (((flag & KSW_EZ_SPLICE_FOR) && (junc[t+1]&1)) || ((flag & KSW_EZ_SPLICE_REV) && (junc[t+1]&8)))
-                        ((int8_t*)donor)[t] += 9;
-                }
-            }
-            for (t = 2; t < tlen; ++t) {
-                int can_type = 0;
-                if ((flag & KSW_EZ_SPLICE_FOR) && target[t-1] == 0 && target[t] == 2) can_type = 1; // ...yAG
-                if ((flag & KSW_EZ_SPLICE_REV) && target[t-1] == 0 && target[t] == 1) can_type = 1; // ...yAC
-                if (can_type && (target[t-2] == 1 || target[t-2] == 3)) can_type = 2;
-                if (can_type) ((int8_t*)acceptor)[t] = can_type == 2? 0 : semi_cost;
-            }
-            if (junc)
-            {
-                for (t = 0; t < tlen; ++t)
-                {
-                    if (((flag & KSW_EZ_SPLICE_FOR) && (junc[t]&2)) || ((flag & KSW_EZ_SPLICE_REV) && (junc[t]&4)))
-                        ((int8_t*)acceptor)[t] += 9;
-                }
-            }
-        }	
-        else
-        {
-            for (t = 0; t < tlen - 4; ++t) {
-                int can_type = 0; // type of canonical site: 0=none, 1=GT/AG only, 2=GTr/yAG
-                if ((flag & KSW_EZ_SPLICE_FOR) && target[t+1] == 2 && target[t+2] == 0) can_type = 1; // GAy...
-                if ((flag & KSW_EZ_SPLICE_REV) && target[t+1] == 1 && target[t+2] == 0) can_type = 1; // CAy...
-                if (can_type && (target[t+3] == 1 || target[t+3] == 3)) can_type = 2;
-                if (can_type) ((int8_t*)donor)[t] = can_type == 2? 0 : semi_cost;
-            }
-            if (junc)
-            {
-                for (t = 0; t < tlen - 1; ++t)
-                {
-                    if (((flag & KSW_EZ_SPLICE_FOR) && (junc[t+1]&2)) || ((flag & KSW_EZ_SPLICE_REV) && (junc[t+1]&4)))
-                        ((int8_t*)donor)[t] += 9;
-                }
-            }
-
-            for (t = 2; t < tlen; ++t) {
-                int can_type = 0;
-                if ((flag & KSW_EZ_SPLICE_FOR) && target[t-1] == 3 && target[t] == 2) can_type = 1; // ...yTG
-                if ((flag & KSW_EZ_SPLICE_REV) && target[t-1] == 3 && target[t] == 1) can_type = 1; // ...yTC
-                if (can_type && (target[t-2] == 0 || target[t-2] == 2)) can_type = 2;
-                if (can_type) ((int8_t*)acceptor)[t] = can_type == 2? 0 : semi_cost;
-            }
-            if (junc)
-            {
-                for (t = 0; t < tlen; ++t)
-                {
-                    if (((flag & KSW_EZ_SPLICE_FOR) && (junc[t]&1)) || ((flag & KSW_EZ_SPLICE_REV) && (junc[t]&8)))
-                        ((int8_t*)acceptor)[t] += 9;
-                }
-            }
-        }
+		for (t = 2; t < tlen; ++t) {
+			int can_type = 0;
+			if ((flag & KSW_EZ_SPLICE_FOR) && target[t-1] == 0 && target[t] == 2) can_type = 1; // ...yAG
+			if ((flag & KSW_EZ_SPLICE_REV) && target[t-1] == 0 && target[t] == 1) can_type = 1; // ...yAC
+			if (can_type && (target[t-2] == 1 || target[t-2] == 3)) can_type = 2;
+			if (can_type) ((int8_t*)acceptor)[t] = can_type == 2? 0 : semi_cost;
+		}
 	}
-
 	for (r = 0, last_st = last_en = -1; r < qlen + tlen - 1; ++r) {
 		int st = 0, en = tlen - 1, st0, en0, st_, en_;
 		int8_t x1, x21, v1, *u8 = (int8_t*)u, *v8 = (int8_t*)v;

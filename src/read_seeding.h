@@ -31,7 +31,6 @@
 #define SECONDARY_TO_PRIMARY 0.9
 #define E_SHIFT 5
 #define STRAND_DIFF 20
-#define NONCAN 9
 #define MIN_CHAIN_SCORE 20
 #define MAX_READ_JOIN_GAP 2000
 #define BATCH_SIZE 100000
@@ -147,7 +146,6 @@ typedef struct{
 	uint8_t k_t; //index kmer
 	uint8_t seed_k_t; //alignment kmer
     uint8_t with_gtf;
-    uint8_t transcript_strand;
     int strand_diff;
 
 	float error_overall;
@@ -164,7 +162,8 @@ typedef struct{
 	int max_extend_left_right;
 	char *temp_file_perfix;
 	char *sam_path;
-	char *anno_path;
+	char *gtf_path;
+    char *anno_load_script;
 }param_map;
 
 typedef struct
@@ -228,7 +227,7 @@ uint8_t re_bt;
 uint8_t re_2bt;
 uint8_t top_n;
 uint8_t seed_step;
-int8_t seed_offset;
+uint8_t seed_offset;
 uint16_t pos_n_max;
 uint16_t uni_pos_n_max;
 int batch_size;

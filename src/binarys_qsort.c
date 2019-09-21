@@ -3,80 +3,54 @@
 #include "read_seeding.h"
 #include "aln_2pass.h"
 
-int binsearch_range(uint64_t key, uint32_t *v, int64_t n,  int64_t *range, int8_t k_off)
+int binsearch_range(uint64_t key, uint32_t *v, int64_t n,  int64_t *range, uint8_t k_off)
 {
     int64_t l=0, r=n-1, m;
     uint32_t tmp = 0;
     range[0] = range[1] = -1;
 
-    //printf("k_off = %d\n", k_off);
-
-    if (k_off == 0)
+    while (l <= r)
     {
-        while(l <= r)
+        m = (l+r)/2;
+        tmp = v[m] >> k_off;
+        if (tmp == key)
         {
-            m = (l + r)/2;
-            if (key < v[m])
+            range[0] = range[1] = m;
+            
+            //run low bound
+            int64_t sl=l, sr=m-1, sm;
+            while (sl <= sr)
             {
-                r = m - 1;
-            }
-            else if (key > v[m])
-            {
-                l = m + 1;
-            }
-            else
-            {
-                range[0] = range[1] = m;
-                return 1;
-            }
-        }
-    }
-    else
-    {
-        while (l <= r)
-        {
-            m = (l+r)/2;
-            tmp = v[m] >> k_off;
-            if (tmp == key)
-            {
-                range[0] = range[1] = m;
-                
-                //run low bound
-                int64_t sl=l, sr=m-1, sm;
-                while (sl <= sr)
+                sm = (sl+sr)/2;
+                tmp = v[sm] >> k_off;
+                if (tmp == key)
                 {
-                    sm = (sl+sr)/2;
-                    tmp = v[sm] >> k_off;
-                    if (tmp == key)
-                    {
-                        range[0] = sm;
-                        sr = sm-1;
-                    }
-                    else if (tmp > key) sr = sm - 1;
-                    else    sl = sm + 1;
+                    range[0] = sm;
+                    sr = sm-1;
                 }
-
-                //run upper bound
-                sl = m+1; sr = r;
-                while (sl <= sr)
-                {
-                    sm = (sl+sr)/2;
-                    tmp = v[sm] >> k_off;
-                    if (tmp == key)
-                    {
-                        range[1] = sm;
-                        sl = sm+1;
-                    }
-                    else if (tmp > key) sr = sm - 1;
-                    else    sl = sm + 1;
-                }
-                return 1;
+                else if (tmp > key) sr = sm - 1;
+                else    sl = sm + 1;
             }
-            else if (tmp > key) r = m - 1;
-            else l = m + 1;
-        }
-    }
 
+            //run upper bound
+            sl = m+1; sr = r;
+            while (sl <= sr)
+            {
+                sm = (sl+sr)/2;
+                tmp = v[sm] >> k_off;
+                if (tmp == key)
+                {
+                    range[1] = sm;
+                    sl = sm+1;
+                }
+                else if (tmp > key) sr = sm - 1;
+                else    sl = sm + 1;
+            }
+            return 1;
+        }
+        else if (tmp > key) r = m - 1;
+        else l = m + 1;
+    }
     return -1;
 }
 
@@ -322,26 +296,6 @@ int compare_anchor(const void *a, const void *b)
     }
 }
 
-int compare_intron(const void *a, const void *b)
-{
-    Ival_anno_t* intron1 = (Ival_anno_t* )a;
-    Ival_anno_t* intron2 = (Ival_anno_t* )b;
-
-    if (intron1->Is > intron2->Is)
-        return 1;
-    else if (intron1->Is < intron2->Is)
-        return -1;
-    else
-    {
-        if (intron1->Ie > intron2->Ie)
-            return 1;
-        else if (intron1->Ie < intron2->Ie)
-            return -1;
-        else
-            return 0;
-    }
-}
-
 int compare_exon(const void *a, const void *b)
 {
     Anno_t* exon1 = (Anno_t* )a;
@@ -360,7 +314,6 @@ int compare_exon(const void *a, const void *b)
         else
             return 0;
     }
-   
 }
 
 

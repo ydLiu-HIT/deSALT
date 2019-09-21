@@ -82,6 +82,7 @@ static void init_map_param(param_map *opt)
 	opt->error_ins = 0.36;
 	opt->error_del = 0.31;
 
+	opt->simulated = 0;
 	opt->secondary_ratio = 0.9;
 	opt->min_chain_score = 30;
     opt->strand_diff = 20;
@@ -93,7 +94,7 @@ static void init_map_param(param_map *opt)
 	opt->max_sw_mat = 1000000000;
 	opt->Eindel = 20;
 	opt->thread_n = 4;
-	opt->top_n = TOP_NUM_ALN; //2, 3
+	opt->top_n = 5; //2, 3
 	opt->k_t = 22;
 	opt->e_shift = 5;
 	opt->hash_kmer = 8; //8
@@ -102,7 +103,6 @@ static void init_map_param(param_map *opt)
 	opt->pos_n_max = 50;
 	opt->with_qual = 1;
     opt->with_gtf = 0;
-    opt->transcript_strand = 0;
 	opt->max_exon_num_per_read = 500; //after statics: human_max = 363, mouse_max = 347, dm_max = 82 
 	opt->readlen_max = MAX_READLEN;
 }
@@ -373,11 +373,11 @@ int single_seed_reduction_core_single64(uint64_t (*read_bit)[((MAX_READLEN - 1) 
 				ref_pos_n = buffer_pp[seed_id_r + 1] - buffer_pp[seed_id_r];
                 ref_cnt += ref_pos_n;
 
-				//if (ref_cnt > POS_N_MAX)
-                if(ref_pos_n > pos_n_max)
+				if (ref_cnt > POS_N_MAX)
+                //if(ref_pos_n > pos_n_max)
 				{
-                    continue;
-					//break;
+                    //continue;
+					break;
 				}
 				uni_offset_s_l = kmer_pos_uni - buffer_seqf[seed_id_r];
 				uni_offset_s_r = buffer_seqf[seed_id_r + 1] - (kmer_pos_uni + seed_k_t);
@@ -1360,15 +1360,14 @@ static int aln_usage(void)
 	fprintf(stderr, "    -g --max-read-gap     [INT]    Maximum allowed gap in read when chaining. [%u]\n", MAX_READ_JOIN_GAP);
 	fprintf(stderr, "    -p --secondary-ratio  [FLOAT]  Min secondary-to-primary score ratio. [%.2f]\n", SECONDARY_TO_PRIMARY);
     fprintf(stderr, "    -e --e-shift          [INT]    The number of downstream (upstream) exons will be processed when left (right) extension. [%u]\n", E_SHIFT);
-    fprintf(stderr, "    -T --trans-strand              Find splicing site according to transcript strand\n");
-    fprintf(stderr, "    -G --annotation       [STR]    Provided annotation information for precise intron donor and acceptor sites.\n");
-    fprintf(stderr, "                                   Convert to fixed format of deSALT by Annotation_Load.py \n");
+    fprintf(stderr, "    -G --gtf              [STR]    Provided an annotation file for precise intron donor and acceptor sites.\n");
+    fprintf(stderr, "                                   The release of annotation file and reference genome must the same!\n");
 	fprintf(stderr, "    -x --read-type        [STR]    Specifiy the type of reads and set multiple paramters unless overriden.\n");
 	fprintf(stderr, "                                   [null] default parameters.\n");
 	fprintf(stderr, "                                   ccs (PacBio SMRT CCS reads): error rate 1%%\n");
 	fprintf(stderr, "                                   clr (PacBio SMRT CLR reads): error rate 15%%\n");
 	fprintf(stderr, "                                   ont1d (Oxford Nanopore 1D reads): error rate > 20%%\n");
-	fprintf(stderr, "                                   ont2d (Oxford Nanopore 2D reads): error rate > 12%%\n\n");
+	fprintf(stderr, "                                   ont2d (Oxford Nanopore 2D reads): error rate > 12%%\n");
 
 	fprintf(stderr, "Scoring options\n\n");
 	fprintf(stderr, "    -O --open-pen         [INT(,INT)]\n");
@@ -1380,7 +1379,6 @@ static int aln_usage(void)
 	fprintf(stderr, "    -z --zdrop            [INT(,INT)]\n");
 	fprintf(stderr, "                                   Z-drop score for splice/non-splice alignment. [%u]\n", ZDROP_SCORE);
 	fprintf(stderr, "    -w --band-width       [INT]    Bandwidth used in chaining and DP-based alignment. [%u]\n", BANDWIDTH);
-    fprintf(stderr, "    -R --noncan           [INT]    Penalty score for non-canonical splice junction sites. [%u]\n\n", NONCAN);
 
 	fprintf(stderr, "Output options\n\n");
 	fprintf(stderr, "    -N --top-num-aln      [INT]    Max allowed number of secondary alignment. [%u]\n", TOP_NUM_ALN);
@@ -1426,15 +1424,14 @@ int help_usage()
 	fprintf(stderr, "    -g --max-read-gap     [INT]    Maximum allowed gap in read when chaining. [%u]\n", MAX_READ_JOIN_GAP);
 	fprintf(stderr, "    -p --secondary-ratio  [FLOAT]  Min secondary-to-primary score ratio. [%.2f]\n", SECONDARY_TO_PRIMARY);
     fprintf(stderr, "    -e --e-shift          [INT]    The number of downstream (upstream) exons will be processed when left (right) extension. [%u]\n", E_SHIFT);
-    fprintf(stderr, "    -T --trans-strand              Find splicing sites according to transcript strand\n");
-    fprintf(stderr, "    -G --annotation       [STR]    Provided annotation information for precise intron donor and acceptor sites.\n");
-    fprintf(stderr, "                                   Convert to fixed format of deSALT by Annotation_Load.py \n");
+    fprintf(stderr, "    -G --gtf              [STR]    Provided an annotation file for precise intron donor and acceptor sites.\n");
+    fprintf(stderr, "                                   The release of annotation file and reference genome must the same!\n");
 	fprintf(stderr, "    -x --read-type        [STR]    Specifiy the type of reads and set multiple paramters unless overriden.\n");
 	fprintf(stderr, "                                   [null] default parameters.\n");
 	fprintf(stderr, "                                   ccs (PacBio SMRT CCS reads): error rate 1%%\n");
 	fprintf(stderr, "                                   clr (PacBio SMRT CLR reads): error rate 15%%\n");
 	fprintf(stderr, "                                   ont1d (Oxford Nanopore 1D reads): error rate > 20%%\n");
-	fprintf(stderr, "                                   ont2d (Oxford Nanopore 2D reads): error rate > 12%%\n\n");
+	fprintf(stderr, "                                   ont2d (Oxford Nanopore 2D reads): error rate > 12%%\n");
 
 	fprintf(stderr, "Scoring options\n\n");
 	fprintf(stderr, "    -O --open-pen         [INT(,INT)]\n");
@@ -1446,7 +1443,6 @@ int help_usage()
 	fprintf(stderr, "    -z --zdrop            [INT(,INT)]\n");
 	fprintf(stderr, "                                   Z-drop score for splice/non-splice alignment. [%u]\n", ZDROP_SCORE);
 	fprintf(stderr, "    -w --band-width       [INT]    Bandwidth used in chaining and DP-based alignment. [%u]\n", BANDWIDTH);
-    fprintf(stderr, "    -R --noncan           [INT]    Penalty score for non-canonical splice junction sites. [%u]\n\n", NONCAN);
 
 	fprintf(stderr, "Output options\n\n");
 	fprintf(stderr, "    -N --top-num-aln      [INT]    Max allowed number of secondary alignment. [%u]\n", TOP_NUM_ALN);
@@ -1461,7 +1457,7 @@ int help_usage()
 	return 1;
 }
 
-static const char *short_option = "K:k:a:t:s:B:n:N:l:c:d:g:O:E:m:M:w:i:I:R:z:p:e:f:QTG:o:hx:";
+static const char *short_option = "K:k:a:t:s:B:n:N:l:c:d:g:O:E:m:M:w:i:I:z:p:e:f:QG:o:hx:";
 
 static struct option long_option[] = {
 	{"index-kmer", required_argument, NULL, 'K'},
@@ -1476,7 +1472,6 @@ static struct option long_option[] = {
 	{"max-exon", required_argument, NULL, 'r'},
 	{"min-chain-score", required_argument, NULL, 'c'},
     {"strand-diff", required_argument, NULL, 'd'},
-    {"trans_strand", no_argument, NULL, 'T'},
 	{"max-read-gap", required_argument, NULL, 'g'},
 	{"open-pen", required_argument, NULL, 'O'},
 	{"ext-pen", required_argument, NULL, 'E'},
@@ -1486,7 +1481,6 @@ static struct option long_option[] = {
 	{"min-frag-dis", required_argument, NULL, 'i'},
 	{"max-intron-len", required_argument, NULL, 'I'},
 	{"zdrop", required_argument, NULL, 'z'},
-    {"noncan", required_argument, NULL, 'R'},
 	{"secondary-to-primary", required_argument, NULL, 'p'},
 	{"e-shift", required_argument, NULL, 'e'},
 	{"temp-file-perfix", required_argument, NULL, 'f'},
@@ -1538,12 +1532,10 @@ int desalt_aln(int argc, char *argv[], const char *version)
 			case 'z': opt->zdrop_D = opt->zdrop_R = strtol(optarg, &p, 10);
 						if (*p != 0 && ispunct(*p) && isdigit(p[1])) opt->zdrop_R = strtol(p+1, &p, 10); break;
 			case 'p': opt->secondary_ratio = atof(optarg); break;
-            case 'R': opt->noncan = atoi(optarg); break;
 			case 'e': opt->e_shift = atoi(optarg); break;
 			case 'f': opt->temp_file_perfix = strdup(optarg); break;
 			case 'Q': opt->with_qual = 0; break;
-            case 'T': opt->transcript_strand = 1; break;
-            case 'G': opt->anno_path = strdup(optarg); opt->with_gtf = 1; break;
+            case 'G': opt->gtf_path = strdup(optarg); opt->with_gtf = 1; break;
 			case 'o': opt->sam_path = strdup(optarg); break;
 			case 'h': return aln_usage(); break;
 			case 'x': if (strcmp(optarg, "ccs") == 0) opt->read_type = 1;
@@ -1607,9 +1599,39 @@ int desalt_aln(int argc, char *argv[], const char *version)
         exit(1);
 	}
 
-    
-	fprintf(stderr, "[Param-INFO] deSALT parameters:index-kmer:%d\tseed-kmer:%d\thash-kmer:%d\tthread:%d\tstrand_diff:%d\tidentify junction:%s\n", opt->k_t, opt->seed_k_t, opt->hash_kmer, opt->thread_n, opt->strand_diff, (opt->transcript_strand)? "transcript strand": "both_strand");
+    if (opt->with_gtf)
+    {
+		fprintf(stderr, "[Param-INFO] deSALT parameters:index-kmer:%d\tseed-kmer:%d\thash-kmer:%d\tthread:%d\tstrand_diff:%d\twith GTF\n", opt->k_t, opt->seed_k_t, opt->hash_kmer, opt->thread_n, opt->strand_diff);
+        //get the folder of deSALT
+        char dir[1024];
+        char desalt_dir[1024];
+        char path_anno_load[1024];
+        int r;
+        r = readlink("/proc/self/exe", dir, 2048);
+        if (r < 0 || r >= 2048)
+            fprintf(stderr, "Failed\n");
+        dir[r] = '\0';
+
+        if (!get_bin_dir(dir, desalt_dir))
+        {
+            strcat(desalt_dir, "/");
+        }
+
+        strcpy(path_anno_load, desalt_dir);
+        strcat(path_anno_load, "Annotation_Load.py");
+        opt->anno_load_script = strdup(path_anno_load);
+        //strcpy(opt->anno_load_script, path_anno_load);
+        if ((access(path_anno_load, F_OK)) == -1)
+        {    
+            fprintf(stderr, "[Wrong]: %s is not exist, please check!\n", path_anno_load);
+            exit(1);
+        }
+    }else
+	{
+		fprintf(stderr, "[Param-INFO] deSALT parameters:index-kmer:%d\tseed-kmer:%d\thash-kmer:%d\tthread:%d\tstrand_diff:%d\tbatch_size:%d\n", opt->k_t, opt->seed_k_t, opt->hash_kmer, opt->thread_n, opt->strand_diff, opt->batch_size);
+	}
 	
+
 	char *index_dir;
 	char *read_fastq;
 	index_dir = strdup(argv[optind + 1]);
@@ -1624,9 +1646,14 @@ int desalt_aln(int argc, char *argv[], const char *version)
 	memset(temp_binary_pos, 0, 1024);
     if (opt->temp_file_perfix == NULL)
     {
+        //opt->temp_file_perfix = strdup("1pass_anchor");
         strcpy(temp_anchor_dir, "./skeletons.lines");
+        //strcat(temp_anchor_dir, opt->temp_file_perfix);
+        //strcat(temp_anchor_dir, "skeletons.lines");
 
         strcpy(temp_binary_pos, "./skeletons.pos");
+        //strcat(temp_binary_pos, opt->temp_file_perfix);
+    	//strcat(temp_binary_pos, "skeletons.pos");
     }
     else
     {
@@ -1691,14 +1718,8 @@ int desalt_aln(int argc, char *argv[], const char *version)
 	waitingLen = (int)(t * q);
 	BASE_true = seed_k_t + 1/error;
     if (read_type == 1)
-    {
-        opt->gap_open_D = opt->gap_open_R = 6;
-        opt->gap_open2_D = opt->gap_open2_R = 24;
-        opt->mismatch_D = opt->mismatch_R = 4;
-        opt->noncan = 5; 
-        BASE_true = seed_k_t + 7;
-    }
-    
+        BASE_true = seed_k_t + 10;
+
     bseq_file_t *bf;
     bf = bseq_open(read_fastq);
     if(bf == 0)

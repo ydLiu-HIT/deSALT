@@ -13,7 +13,7 @@
 #include "read_seeding.h"
 #include "ktime.h"
 
-#define VERSION "1.4"
+#define VERSION "1.1"
 #define CONTACT "Yadong Liu <hitliuyadong1994@163.com>"
 
 static int usage(void)

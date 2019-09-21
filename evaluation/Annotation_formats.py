@@ -10,7 +10,7 @@ GFF_FRAME = [0, 1, 2]
 # some inaccuracy will be allowed. This will have different impact on different operations.
 # i.e. For two intervals to overlap, they will have to overlap on at least ALLOWED_INACCURACY bases.
 
-DEFAULT_ALLOWED_INACCURACY = 10 #before 5
+DEFAULT_ALLOWED_INACCURACY = 5 #before 5
 
 
 class GeneItem:

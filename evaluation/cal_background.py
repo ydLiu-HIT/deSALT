@@ -42,7 +42,7 @@ class Report:
         self.Total_level4_10_expected_exons = 0
 
 
-def processData(datafolder, annotationfile, ss_list):
+def processData(datafolder, annotationfile, ss_list, as_list):
 
     #load annotation:
     annotations = Annotation_formats.Load_Annotation_From_File(annotationfile)
@@ -54,11 +54,16 @@ def processData(datafolder, annotationfile, ss_list):
             annotation_dict[annotation.transcriptname] = annotation
 
     #cal file count
-    fFile = os.listdir(datafolder)
-    file_count = int(len(fFile) / 2)
-
+    command = "ls -l %s*.maf | grep '^-'|wc -l" % datafolder
+    #print command
+    file_count = commands.getstatusoutput(command)[1]
+    file_count = int(file_count)
+    #print "total %d reads in %s" %(file_count, datafolder)
+    AS_list = list()
     SS_list = list()
-    with open(ss_list, 'r') as f_ss:
+    with open(as_list, 'r') as f_as, open(ss_list, 'r') as f_ss:
+        for line in f_as:
+            AS_list.append(line.strip())
         for line in f_ss:
             SS_list.append(line.strip())
 
@@ -83,8 +88,6 @@ def processData(datafolder, annotationfile, ss_list):
         # Reading reference file
         [headers, seqs, quals] = read_fastq(simRefFilePath)
         simGeneName = headers[0]
-        if "transcript" in simGeneName:
-            simGeneName = simGeneName.split(':')[1]
         annotation = annotation_dict[simGeneName]       # Getting the correct annotation
 
         maf_startpos = maf_length = 0
@@ -241,7 +244,7 @@ def merge_static(report1, report2):
     report1.Total_level4_10_expected_exons += report2.Total_level4_10_expected_exons
 
 
-def process(data_folder, group_list, annotationfile, ss_list):
+def process(data_folder, group_list, annotationfile, ss_list, as_list):
     g_list = []
     with open(group_list, 'r') as g:
         lines = g.readlines()
@@ -250,7 +253,7 @@ def process(data_folder, group_list, annotationfile, ss_list):
 
     report_total = Report()
     for group_path in g_list:
-        report = processData(group_path, annotationfile, ss_list)
+        report = processData(group_path, annotationfile, ss_list, as_list)
         #merge
         merge_static(report_total, report)
 
@@ -262,6 +265,7 @@ if __name__ == '__main__':
     group_list = sys.argv[2]
     annotationfile = sys.argv[3]
     ss_list = sys.argv[4]
+    as_list = sys.argv[5]
 
     g_list = []
     with open(group_list, 'r') as g:
@@ -271,6 +275,6 @@ if __name__ == '__main__':
 
     report_total = Report()
     for group_path in g_list:
-        report = processData(group_path, annotationfile, ss_list)
+        report = processData(group_path, annotationfile, ss_list, as_list)
         #merge
         merge_static(report_total, report)

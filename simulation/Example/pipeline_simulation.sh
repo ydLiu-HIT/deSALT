@@ -15,15 +15,15 @@ mkdir CCS CLR ONT2D ONT1D
 cd CCS
 bash ../simulate_CCS.sh
 cd ..
-#
-#cd CLR 
-#bash ../simulate_CLR.sh
-#cd ..
-#
-#cd ONT2D
-#bash ../simulate_ONT2D.sh
-#cd ..
-#
-#cd ONT1D
-#bash ../simulate_ONT1D.sh
-#cd ..
+
+cd CLR 
+bash ../simulate_CLR.sh
+cd ..
+
+cd ONT2D
+bash ../simulate_ONT2D.sh
+cd ..
+
+cd ONT1D
+bash ../simulate_ONT1D.sh
+cd ..
