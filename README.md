@@ -144,10 +144,10 @@ deSAL aln -f tmp_path2 -o out2.sam index_route read2.fq   #the second deSALT pro
 ```
 
 ### 5. Alignment with annotations
-'''
+```
 python Annotation_Load.py genome.gtf genome.info
 deSALT aln -G genome.info index_route read.fa
-'''
+```
 
 ## Simulation benchmarking
 In the simulation study, we simulated 36 RNA-seq long read datasets with various sequencing error rates and read lengths (refers to supplementary) to mimic the datasets from various platforms, i.e., ONT 1D reads (error rate: 25%, mean read length: 7800 bp), ONT 2D reads (error rate: 12%, mean read length: 7800 bp), PacBio subreads (error rate: 15%, mean read length: 8000 bp) and PacBio ROI reads (error rate: 2%, mean read length: 2000 bp). For each of the platforms, there are respectively 9 datasets from 3 species (human, mouse and fruitfly) and in 3 sequencing depths (4X, 10X, and 30X). All the datasets were produced by PBSim based on Ensembl gene annotations (human: GRCh38, version 94, mouse: GRCm38, version 94 and fruitfly: BDGP6, version 94).
@@ -169,8 +169,8 @@ For advising, bug reporting and requiring help, please post on GitHub Issue or c
 
 ## Thanks
 deSALT relies on the hard work of other projects:
-    - The reference de bruijn graph index(RdBG-index):https://github.com/HongzheGuo/deBGA
-    -  Dynamic programming in the second phase:https://github.com/lh3/ksw2
+ - The reference de bruijn graph index(RdBG-index):https://github.com/HongzheGuo/deBGA
+ -  Dynamic programming in the second phase:https://github.com/lh3/ksw2
 
 ## Reference
 [1] Weirather JL et al. Comprehensive comparison of Pacific Biosciences and Oxford Nanopore Technologies and their applications to transcriptome analysis. F1000Res (2017), 6: 100. 
