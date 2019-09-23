@@ -16,6 +16,8 @@ deSALT - De Bruijn graph-based Spliced Aligner for Long Transcriptome reads
     or 
     run deSALT directly in the same folder (Executable programs have been built in advance.)
     
+    ## install by conda
+    conda install -c bioconda desalt
 
 ### **[Special emphasis]**
 
