@@ -27,12 +27,18 @@ In current version of deSALT, [deBGA](https://github.com/HongzheGuo/deBGA) is em
 ## Introduction
 deSALT(de Bruijn graph-based Spliced Aligner for Long Transcriptome reads) is a novel alignment approach with faster speed and sensitive exon identification. Taking the advantages of its novel two pass alignment strategy based on de Bruijn graph-based index, efficient alignment skeleton generation, sensitive exon identification and specifically designed local alignment, deSALT is a fast and accurate RNA-seq long read alignment approach. It has ability to produce high quality full-length read alignment, which is effective to recover the exons and splicing junctions along the entire reads. The workflow of deSALT can be found in `img` folder.
 
-We benchmarked deSALT with 60 simulated datasets having various read length, sequencing error rates and sequencing depth (simulation workflow links). deSALT also assessed the ability of aligners by two real RNA-seq datasets produced by Oxford Nanopore and PacBio platform. One from the well-studied human sample NA12878 by ONT technology and another from real mouse sample (SRR6238555) by SMRT technology.
+We benchmarked deSALT with 60 simulated datasets having various read length, sequencing error rates and sequencing depth (https://github.com/ydLiu-HIT/deSALT/blob/master/simulation/Sim_data_generation.md). We assessed the aligners with three real sequencing datasets. The first two datasets are from a well-studied CEPH sample (NA12878), and respectively produced by ONT cDNA sequencing (containing 15,152,101 reads and 14,134,831,170 bases in total) and ONT direct RNA sequencing (containing 10,302,647 reads and 10,614,186,428 bases in total). The two datasets are available at https://github.com/nanopore-wgs-consortium/NA12878. The third dataset is from a mouse sample produced by the PacBio platform [39] (SRA Accession Number: SRR6238555; containing 2,269,795 reads and 3,213,849,871 bases in total).
 
 deSALT is open source and free for non-commerical use which is mainly designed by Yadong Liu & Bo Liu and developed by Yadong Liu in Center for Bioinformatics, Harbin Institute of Technology, China.
 
 ## Memory usage
-DeSALT fits most modern servers and workstations and the peak memory footprint depends on the size of reference genome assembly. In practice, 35 Gigabytes, 31 Gigabytes and 3.5 Gigabytes are required for Homo Sapiens(GRCh38), Mus Musculus(GRCm38) and Drosophila melanogaster(DM6) geomes, on a server with Intel Xeon CPU at 2.00 GHz, 1 Terabytes RAM running Linux Ubuntu 14.04.
+deSALT fits most modern servers and workstations and the peak memory footprint depends on the size of reference genome assembly. In practice, 35 Gigabytes, 31 Gigabytes and 3.5 Gigabytes are required for Homo Sapiens(GRCh38), Mus Musculus(GRCm38) and Drosophila melanogaster(DM6) geomes, on a server with Intel Xeon CPU at 2.00 GHz, 1 Terabytes RAM running Linux Ubuntu 14.04.
+
+It is worthnoting that, the construction of RdBG-index for large genomes could cost a couple of hours (129, 112 and 4 minutes for human, mouse and fruit fly, respectively) and several tens of GB RAM space (73GB, 63GB and 5.5GB for human, mouse and fruit fly, respectively), depending on the number of distinct k-mers in the genome. This is mainly due to that it needs to extract and sort all the k-mers to construct RdBG at first. However, the index needs only to be built once before use, and we also provide pre-built RdBG-indexes of human, mouse and fruit fly in google drive, users can download the RdBG-index directly.
+https://drive.google.com/file/d/11E2j1X5jGqKNVtyNHsfPjqnu-fVBgyoi/view?usp=sharing, human GRCh38
+https://drive.google.com/file/d/1tipOySE-_tmLI4jiy3GZdTj08RhJMXcl/view?usp=sharing, mouse, GRCm38
+https://drive.google.com/file/d/1ZUg-Yc7oRQQjjJdh4_IJcDGomIVNfJBs/view?usp=sharing, fruit fly, DM6
+
 
 ## Installation
 Current version of deSALT has been tested on 64-bit Linux. The source code is written in C, and can be directly download from: https://github.com/ydLiu-HIT/deSALT or https://github.com/hitbc/deSALT. The makefile is attached. Use the make command for generating the executable file.
@@ -53,8 +59,8 @@ deSALT aln <index_route> read.fa/fq
 Algorithm options:
 
 	-t --thread           [INT]	Number of threads. [4]
-	-K --index-kmer       [INT]	K-mer length of RdBG-index, the default index kmer-size of deBGA.[21,22]
-	-k --seeding-kmer     [INT]	K-mer length of seeding process (no long than RdBG-index). [15]
+	-k --index-kmer       [INT]	K-mer length of RdBG-index, the default index kmer-size of deBGA.[21,22]
+	-l --seeding-lmer     [INT]	K-mer length of seeding process (no long than RdBG-index). [15]
 	-a --local-hash-kmer  [INT]	K-mer length of local hash process. In order to detect spanning exons in 2-pass
 					alignment, a local hash query procedure is needed. The hash kmer is recommend no 
 					more than 10 bp. [8]
@@ -63,7 +69,7 @@ Algorithm options:
 					deSALT take only 655350 reads into the memory every time. [655350]
 	-n --max-uni-pos      [INT]	Maximum allowed number of hits per seed. If one seed in unipath has more than 50
 					copies in reference genome, we will ingore the seed. [50]
-	-l --max-readlen      [INT]	Maximum allowed read length. [1000000]
+	-L --max-readlen      [INT]	Maximum allowed read length. [1000000]
 	-i --min-frag-dis     [INT]	Maximum allowed distance of two fragment can be merge. [20]
 	-I --max-intron-len   [INT]	Maximum allowed intron length. [200000]
 	-c --min-chain-score  [INT]	Minimal skeleton score(match bases minus gap penalty). [30]
@@ -109,13 +115,13 @@ Output options:
 ## Important options
 ### 1. Three different kmer length in deSALT.
 
-`-K index-kmer`: the kmer length to construct the reference de Bruijn graph index(RdBG-index), which organize the reference by unitigs. The default length is 22bp with length range from 20-28bp.
+`-k index-kmer`: the kmer length to construct the reference de Bruijn graph index(RdBG-index), which organize the reference by unitigs. The default length is 22bp with length range from 20-28bp.
 
-`-k seeding-kmer`: a smaller kmer length than index-kmer for the seeding process. Due the high error rate of long reads (except PacBio ROI reads), large kmers are hard to locate reads in reference genomes. Based on experience, a 15-18bp seeding kmer is best which take cares the search space and enough hits for skeletons generation.
+`-l seeding-lmer`: a smaller kmer length than index-kmer for the seeding process. Due the high error rate of long reads (except PacBio ROI reads), large kmers are hard to locate reads in reference genomes. Based on experience, a 15-18bp seeding kmer is best which take cares the search space and enough hits for skeletons generation.
 
 `-a local-hash-kmer`: if one read has a spanning exon due to there are no seed matches between read and spanning exon in the 2-pass alignment, a extreme small kmer is needed to find matches.
 
-In general, `index-kmer > seeding-kmer > local_hash_kmer`. Considering that `seeding-kmer` is smaller than `index-kmer`, when we do a binary search for seeding process, the base of seeding-kmer is the perfix of index-kmer. Thus, a seeding-kmer will have at most **4<sup>(|index-kmer| - |seeding-kmer|)</sup>**. If we use a large index-kmer and a small seeding-kmer, the search space for seeding will be increased fast. Take the consider of time consumption, we give a suggestion of the corresponding index-kmer length and seeding-kmer length by the following table. A smaller index-kmer can be faster and the accuracy remain similar. 
+In general, `index-kmer > seeding-lmer > local_hash_kmer`. Considering that `seeding-lmer` is smaller than `index-kmer`, when we do a binary search for seeding process, the base of seeding-kmer is the perfix of index-kmer. Thus, a seeding-kmer will have at most **4<sup>(|index-kmer| - |seeding-kmer|)</sup>**. If we use a large index-kmer and a small seeding-kmer, the search space for seeding will be increased fast. Take the consider of time consumption, we give a suggestion of the corresponding index-kmer length and seeding-kmer length by the following table. A smaller index-kmer can be faster and the accuracy remain similar. 
 
 |seeding-kmer | index-kmer|
 |:------:|:------:|
@@ -125,7 +131,7 @@ In general, `index-kmer > seeding-kmer > local_hash_kmer`. Considering that `see
 |15|21 / 22|
 |14|21|
 
-**What's more, with the limitation of RdBG-index kmer can not be less than 21, two binary search steps are needed for seeding process, so a smaller seeding-kmer(e.g. k14) will take more time for alignment than a larger seeding-kmer(e.g. k15)**
+**What's more, with the limitation of RdBG-index kmer can not be less than 21, two binary search steps are needed for seeding process, so a smaller seeding-kmer(e.g. -l 14) will take more time for alignment than a larger seeding-kmer(e.g. -l 15)**
 
 **Additional, a smaller seed step(`-s`) and a smaller chain score(`-c`) will get a better result, but with the cost of more time.**
 
@@ -134,7 +140,7 @@ In general, `index-kmer > seeding-kmer > local_hash_kmer`. Considering that `see
 ### 3. Align different kinds of reads with various sequencing error rates.
 `-x read-type:` deSALT can process reads from four main stream platforms,  i.e., ONT 1D reads (error rate: 25%), ONT 2D (1D2) reads (error rate: 12%), PacBio subreads (error rate: 15%) and PacBio ROI reads (error rate: 1%). The total sequencing error rates and the ratios of the sequencing errors (represented as mismatches: insertions: deletions) are configured by referring to previous studies[1-2].
 
-**For error-prone (ONT1D) reads, options `-k 14 -s 2 -x ont1d` are highly recommend to improve the accuracy of exons recovery and full length of transcripts generation.** Of course, it will cost more time than default parameters, but not too much.
+**For error-prone (ONT1D) reads, options `-l 14 -s 2 -x ont1d` are highly recommend to improve the accuracy of exons recovery and full length of transcripts generation.** Of course, it will cost more time than default parameters, but not too much.
 
 **For low error rate (CCS) reads, options `-x ccs -O6,24 -M4` are recommend to give alignments with fewer mismatches/gaps and to open introns more freely.**
 
@@ -152,14 +158,15 @@ deSALT aln -G genome.info index_route read.fa
 ```
 
 ## Simulation benchmarking
-In the simulation study, we simulated 36 RNA-seq long read datasets with various sequencing error rates and read lengths (refers to supplementary) to mimic the datasets from various platforms, i.e., ONT 1D reads (error rate: 25%, mean read length: 7800 bp), ONT 2D reads (error rate: 12%, mean read length: 7800 bp), PacBio subreads (error rate: 15%, mean read length: 8000 bp) and PacBio ROI reads (error rate: 2%, mean read length: 2000 bp). For each of the platforms, there are respectively 9 datasets from 3 species (human, mouse and fruitfly) and in 3 sequencing depths (4X, 10X, and 30X). All the datasets were produced by PBSim based on Ensembl gene annotations (human: GRCh38, version 94, mouse: GRCm38, version 94 and fruitfly: BDGP6, version 94).
+All the benchmarks were implemented on a server with Intel Xeon E4280 CPU at 2.0GHZ and 1 Terabytes RAM, running Linux Ubuntu 16.04. The simulated datasets were generated from the reference of three organisms: Homo sapiens GRCh38 (human), Mus musculus GRCm38 (mouse), and Drosophila melanogaster r6 (fruit fly), with corresponding Ensembl gene annotations. There are in total 60 datasets used for the benchmark, and each of them was generated by a specific combination of sequencing model, simulated transcriptome and coverage. 
+6 sequencing models were built according to previous studies, to comprehensively benchmark the aligners on the datasets produced by various long read sequencing platforms. For PacBio platforms, there were two models built with fixed parameters: “PacBio ROI reads” (error rate = 2%, mean read length = 2000 bp) and “PacBio subreads” (error rate = 15%, mean read length = 8000 bp). For ONT platforms, four models were built by which two of them were also with fix parameters: “ONT 2D reads” (error rate = 13%, mean read length = 7800 bp) and “ONT 1D reads” (error rate = 25%, mean read length = 7800 bp). And the other two models, “PS-ONT reads” and “NS-ONT reads” were automatically built by PBSim and NanoSim based on a real ONT sequencing dataset (SRA Accession Number: SRR2848544), respectively. we used the two parameter-based models, “ONT 2D reads” and “ONT 1D reads”, as a complement, where the 25% and 12% error rates coincide with typical error rates of ONT 2D (1D2) and 1D reads. The parameters and command lines of PBSim and NanoSim are in Supplementary Notes.
 
-Due to there is no well-studied simulator for noisy long RNA-seq reads, we used PBSIM to generate synthetic datasets by a set of transcripts generated from a particular reference genome and corresponding annotations inspired by RNAseqEval project (https://github.com/kkrizanovic/RNAseqEval). Detailed description of synthetic dataset preparation can be found at https://github.com/ydLiu-HIT/deSALT/blob/master/simulation/Sim_data_generation.md.
+Detailed description of synthetic dataset preparation can be found at https://github.com/ydLiu-HIT/deSALT/blob/master/simulation/Sim_data_generation.md.
 
 The simulated datasets and description used for benchmarking are available at https://drive.google.com/drive/folders/1jk1ddv_QGozumnO_S_f-1lJlOehL3SyW?usp=sharing
 
 ## Evaluation on simulated and real datasets
-For synthetic dataset, deSALT compares the alignment files (SAM or BAM) to the simulation data generation by PBSIM which have ground truth. In order to reveal the performance of aligners, we take the potential structure of simulation data into consideration and evaluate the results from four aspects. Detailed description of synthetic dataset evaluation can be found at https://github.com/ydLiu-HIT/deSALT/blob/master/evaluation/data_evaluation.md
+For synthetic dataset, deSALT compares the alignment files (SAM or BAM) to the simulation data generation by PBSIM or NanoSim which have ground truth. In order to reveal the performance of aligners, we take the potential structure of simulation data into consideration and evaluate the results from four aspects. Detailed description of synthetic dataset evaluation can be found at https://github.com/ydLiu-HIT/deSALT/blob/master/evaluation/data_evaluation.md
 
 As for the evaluation of real datasets, we compare the alignment files to corresponding annotations. For each alignment, we find the most overlapped transcript in annotations as aligned transcript, then detect the overlapped exons and calculate the boundaries to make a decision whether the alignment is a good alignment. The details also refer to https://github.com/ydLiu-HIT/deSALT/blob/master/evaluation/data_evaluation.md.
 
