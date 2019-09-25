@@ -1346,13 +1346,13 @@ static int aln_usage(void)
 
 	fprintf(stderr, "Algorithm options:\n\n");
 	fprintf(stderr, "    -t --thread           [INT]    Number of threads. [4]\n");
-	fprintf(stderr, "    -K --index-kmer       [INT]    K-mer length of RdBG-index. [%u]\n", INDEX_KMER);
-	fprintf(stderr, "    -k --seeding-kmer     [INT]    K-mer length of seeding process (no long than RdBG-index). [%u]\n", SEEDING_KMER);
+	fprintf(stderr, "    -k --index-kmer       [INT]    K-mer length of RdBG-index. [%u]\n", INDEX_KMER);
+	fprintf(stderr, "    -l --seeding-lmer     [INT]    K-mer length of seeding process (no long than RdBG-index). [%u]\n", SEEDING_KMER);
 	fprintf(stderr, "    -a --local-hash-kmer  [INT]    K-mer length of local hash process. [%u]\n", LOCAL_HASH_KMER);
 	fprintf(stderr, "    -s --seed-step        [INT]    The interval of seeding. [%u]\n", SEED_STEP);
     fprintf(stderr, "    -B --batch-size       [INT]    The number of reads to be processed in one loop. [%u]\n", BATCH_SIZE);
 	fprintf(stderr, "    -n --max-uni-pos      [INT]    Maximum allowed number of hits per seed. [%u]\n", MAX_UNI_POS);
-	fprintf(stderr, "    -l --max-readlen      [INT]    Maximum allowed read length. [%u]\n", MAX_READLEN);
+	fprintf(stderr, "    -L --max-readlen      [INT]    Maximum allowed read length. [%u]\n", MAX_READLEN);
 	fprintf(stderr, "    -i --min-frag-dis     [INT]    Maximum allowed distance of two fragment can be connect. [%u]\n", MIN_FRAG_DIS);
 	fprintf(stderr, "    -I --max-intron-len   [INT]    maximum allowed intron length. [%u]\n", SPLICDISTANCE);
 	fprintf(stderr, "    -c --min-chain-score  [INT]    minimal skeleton score(match bases minus gap penalty). [%u]\n", MIN_CHAIN_SCORE);
@@ -1412,13 +1412,13 @@ int help_usage()
 
 	fprintf(stderr, "Algorithm options:\n\n");
 	fprintf(stderr, "    -t --thread           [INT]    Number of threads. [4]\n");
-	fprintf(stderr, "    -K --index-kmer       [INT]    K-mer length of RdBG-index. [%u]\n", INDEX_KMER);
-	fprintf(stderr, "    -k --seeding-kmer     [INT]    K-mer length of seeding process (no long than RdBG-index). [%u]\n", SEEDING_KMER);
+	fprintf(stderr, "    -k --index-kmer       [INT]    K-mer length of RdBG-index. [%u]\n", INDEX_KMER);
+	fprintf(stderr, "    -l --seeding-lmer     [INT]    K-mer length of seeding process (no long than RdBG-index). [%u]\n", SEEDING_KMER);
 	fprintf(stderr, "    -a --local-hash-kmer  [INT]    K-mer length of local hash process. [%u]\n", LOCAL_HASH_KMER);
 	fprintf(stderr, "    -s --seed-step        [INT]    The interval of seeding. [%u]\n", SEED_STEP);
     fprintf(stderr, "    -B --batch-size       [INT]    The number of reads to be processed in one loop. [%u]\n", BATCH_SIZE);
 	fprintf(stderr, "    -n --max-uni-pos      [INT]    Maximum allowed number of hits per seed. [%u]\n", MAX_UNI_POS);
-	fprintf(stderr, "    -l --max-readlen      [INT]    Maximum allowed read length. [%u]\n", MAX_READLEN);
+	fprintf(stderr, "    -L --max-readlen      [INT]    Maximum allowed read length. [%u]\n", MAX_READLEN);
 	fprintf(stderr, "    -i --min-frag-dis     [INT]    Maximum allowed distance of two fragment can be connect. [%u]\n", MIN_FRAG_DIS);
 	fprintf(stderr, "    -I --max-intron-len   [INT]    maximum allowed intron length. [%u]\n", SPLICDISTANCE);
 	fprintf(stderr, "    -c --min-chain-score  [INT]    minimal skeleton score(match bases minus gap penalty). [%u]\n", MIN_CHAIN_SCORE);
@@ -1461,18 +1461,18 @@ int help_usage()
 	return 1;
 }
 
-static const char *short_option = "K:k:a:t:s:B:n:N:l:c:d:g:O:E:m:M:w:i:I:R:z:p:e:f:QTG:o:hx:";
+static const char *short_option = "k:l:a:t:s:B:n:N:L:c:d:g:O:E:m:M:w:i:I:R:z:p:e:f:QTG:o:hx:";
 
 static struct option long_option[] = {
-	{"index-kmer", required_argument, NULL, 'K'},
-	{"seeding-kmer", required_argument, NULL, 'k'},
+	{"index-kmer", required_argument, NULL, 'k'},
+	{"seeding-lmer", required_argument, NULL, 'l'},
 	{"local-hash-kmer", required_argument, NULL, 'a'},
 	{"thread", required_argument, NULL, 't'},
 	{"seed-step", required_argument, NULL, 's'},
     {"batch-size", required_argument, NULL, 'S'},
 	{"max-uni-pos", required_argument, NULL, 'n'},
 	{"top-num-aln", required_argument, NULL, 'N'},
-	{"max-readlen", required_argument, NULL, 'l'},
+	{"max-readlen", required_argument, NULL, 'L'},
 	{"max-exon", required_argument, NULL, 'r'},
 	{"min-chain-score", required_argument, NULL, 'c'},
     {"strand-diff", required_argument, NULL, 'd'},
@@ -1513,15 +1513,15 @@ int desalt_aln(int argc, char *argv[], const char *version)
 	{
 		switch(c)
 		{
-			case 'K': opt->k_t = atoi(optarg); break;
-			case 'k': opt->seed_k_t = atoi(optarg); break;
+			case 'k': opt->k_t = atoi(optarg); break;
+			case 'l': opt->seed_k_t = atoi(optarg); break;
 			case 'a': opt->hash_kmer = atoi(optarg); break;
 			case 't': opt->thread_n = atoi(optarg); break;
 			case 's': opt->seed_step = atoi(optarg); break;
             case 'B': opt->batch_size = atoi(optarg); break;
 			case 'n': opt->pos_n_max = atoi(optarg); break;
 			case 'N': opt->top_n = atoi(optarg); break;
-			case 'l': opt->readlen_max = atoi(optarg); break;
+			case 'L': opt->readlen_max = atoi(optarg); break;
 			case 'r': opt->max_exon_num_per_read = atoi(optarg); break;
 			case 'c': opt->min_chain_score = atoi(optarg); break;
             case 'd': opt->strand_diff = atoi(optarg); break;
@@ -1608,7 +1608,7 @@ int desalt_aln(int argc, char *argv[], const char *version)
 	}
 
     
-	fprintf(stderr, "[Param-INFO] deSALT parameters:index-kmer:%d\tseed-kmer:%d\thash-kmer:%d\tthread:%d\tstrand_diff:%d\tidentify junction:%s\n", opt->k_t, opt->seed_k_t, opt->hash_kmer, opt->thread_n, opt->strand_diff, (opt->transcript_strand)? "transcript strand": "both_strand");
+	fprintf(stderr, "[Param-INFO] deSALT parameters:index-kmer:%d\tseed-lmer:%d\thash-kmer:%d\tthread:%d\tstrand_diff:%d\tidentify junction:%s\n", opt->k_t, opt->seed_k_t, opt->hash_kmer, opt->thread_n, opt->strand_diff, (opt->transcript_strand)? "transcript strand": "both_strand");
 	
 	char *index_dir;
 	char *read_fastq;
