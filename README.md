@@ -35,9 +35,10 @@ deSALT is open source and free for non-commerical use which is mainly designed b
 deSALT fits most modern servers and workstations and the peak memory footprint depends on the size of reference genome assembly. In practice, 35 Gigabytes, 31 Gigabytes and 3.5 Gigabytes are required for Homo Sapiens(GRCh38), Mus Musculus(GRCm38) and Drosophila melanogaster(DM6) geomes, on a server with Intel Xeon CPU at 2.00 GHz, 1 Terabytes RAM running Linux Ubuntu 14.04.
 
 It is worthnoting that, the construction of RdBG-index for large genomes could cost a couple of hours (129, 112 and 4 minutes for human, mouse and fruit fly, respectively) and several tens of GB RAM space (73GB, 63GB and 5.5GB for human, mouse and fruit fly, respectively), depending on the number of distinct k-mers in the genome. This is mainly due to that it needs to extract and sort all the k-mers to construct RdBG at first. However, the index needs only to be built once before use, and we also provide pre-built RdBG-indexes of human, mouse and fruit fly in google drive, users can download the RdBG-index directly.
-https://drive.google.com/file/d/11E2j1X5jGqKNVtyNHsfPjqnu-fVBgyoi/view?usp=sharing, human GRCh38
-https://drive.google.com/file/d/1tipOySE-_tmLI4jiy3GZdTj08RhJMXcl/view?usp=sharing, mouse, GRCm38
-https://drive.google.com/file/d/1ZUg-Yc7oRQQjjJdh4_IJcDGomIVNfJBs/view?usp=sharing, fruit fly, DM6
+
+ - https://drive.google.com/file/d/11E2j1X5jGqKNVtyNHsfPjqnu-fVBgyoi/view?usp=sharing, human GRCh38
+ - https://drive.google.com/file/d/1tipOySE-_tmLI4jiy3GZdTj08RhJMXcl/view?usp=sharing, mouse, GRCm38
+ - https://drive.google.com/file/d/1ZUg-Yc7oRQQjjJdh4_IJcDGomIVNfJBs/view?usp=sharing, fruit fly, DM6
 
 
 ## Installation
