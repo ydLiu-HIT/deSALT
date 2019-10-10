@@ -1,5 +1,6 @@
 # deSALT:
 [![DOI](https://zenodo.org/badge/159485852.svg)](https://zenodo.org/badge/latestdoi/159485852)
+
 deSALT - De Bruijn graph-based Spliced Aligner for Long Transcriptome reads
 
 ![deSALT](https://github.com/ydLiu-HIT/deSALT/blob/master/img/deSALT_fig.png)
@@ -174,6 +175,7 @@ As for the evaluation of real datasets, we compare the alignment files to corres
 
 ## Citation
 bioRxiv 612176; doi: https://doi.org/10.1101/612176
+
 [![DOI](https://zenodo.org/badge/159485852.svg)](https://zenodo.org/badge/latestdoi/159485852)
 
 ## Contact
