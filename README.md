@@ -173,7 +173,10 @@ As for the evaluation of real datasets, we compare the alignment files to corres
 
 ## Citation
 bioRxiv 612176; doi: https://doi.org/10.1101/612176
+
 https://zenodo.org/badge/159485852.svg
+
+https://zenodo.org/badge/latestdoi/159485852
 
 
 ## Contact
