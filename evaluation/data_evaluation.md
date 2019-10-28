@@ -37,6 +37,8 @@ python Eval_NanoSim_data.py input_read.fa alignment.sam annotations.gtf All_SS_i
  
  [4] All_SS_iso.txt: The transcript id of all single splicing isoforms.
  
+ [5] out.csv: the results of evaluation.
+ 
  ## Evaluation real datasets
  As for the evaluation of real datasets, we compare the alignment files to corresponding annotations. For each alignment, we find the most overlapped transcript in annotations as aligned transcript, then detect the overlapped exons and calculate the boundaries to make a decision whether the alignment is a good alignment. The evaluation was down by Eval_real_data.py script.
  
