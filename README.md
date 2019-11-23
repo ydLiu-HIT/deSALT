@@ -82,7 +82,7 @@ Algorithm options:
 					alignment if secondary_score / primary_score > 0.9. [0.9]
 	-p --e-shift          [INT]	The number of downstream (upstream) exons will be processed when left (right) extension. [5]
 	-T --trans-strand               Find splicing sites in transcript strand.
-    	-G --annotation              [STR]	Provided an annotation file for precise intron donor and acceptor sites.
+    	-G --annotation       [STR]	Provided an annotation file for precise intron donor and acceptor sites.
     	                           	Convert GTF file(now support GTF format only) to fixed format of deSALT by Annotation_Load.py
 	-x --read-type        [STR]	Specifiy the type of reads and set multiple paramters unless overriden.
 	                           	[null] default parameters. error rate 13% 
