@@ -161,6 +161,8 @@ def Load_Annotation_From_GTF(filename, fpath, check_duplicates = True):
     gff_lines = []
 
     for line in gtffile:
+        if line[0] == "#":
+            continue
         elements = line.strip().split('\t')
         gffline = GFFLine()
 
