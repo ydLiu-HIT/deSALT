@@ -82,8 +82,8 @@ Algorithm options:
 					alignment if secondary_score / primary_score > 0.9. [0.9]
 	-p --e-shift          [INT]	The number of downstream (upstream) exons will be processed when left (right) extension. [5]
 	-T --trans-strand               Find splicing sites in transcript strand.
-    	-G --gtf              [STR]	Provided an annotation file for precise intron donor and acceptor sites.
-    	                           	Convert to fixed format of deSALT by Annotation_Load.py
+    	-G --annotation              [STR]	Provided an annotation file for precise intron donor and acceptor sites.
+    	                           	Convert GTF file(now support GTF format only) to fixed format of deSALT by Annotation_Load.py
 	-x --read-type        [STR]	Specifiy the type of reads and set multiple paramters unless overriden.
 	                           	[null] default parameters. error rate 13% 
 	                           	ccs (PacBio SMRT CCS reads): error rate 1%
@@ -156,7 +156,7 @@ deSAL aln -f tmp_path2 -o out2.sam index_route read2.fq   #the second deSALT pro
 
 ### 5. Alignment with annotations
 ```
-python Annotation_Load.py genome.gtf genome.info
+python Annotation_Load.py genome.gtf genome.info   #the annotation file should be in GTF format
 deSALT aln -G genome.info index_route read.fa
 ```
 
