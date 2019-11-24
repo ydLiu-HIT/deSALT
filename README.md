@@ -6,7 +6,7 @@ deSALT - De Bruijn graph-based Spliced Aligner for Long Transcriptome reads
 ![deSALT](https://github.com/ydLiu-HIT/deSALT/blob/master/img/deSALT_fig.png)
 
 ## Getting started
-    git clone --recursive https://github.com/ydLiu-HIT/deSALT.git (git clone https://github.com/hitbc/deSALT.git)
+    git clone --recursive https://github.com/ydLiu-HIT/deSALT.git
     cd deSALT/src/deBGA-master/
     make   ## built deBGA for RdBG-index
     cd ..
@@ -44,7 +44,7 @@ It is worthnoting that, the construction of RdBG-index for large genomes could c
 
 
 ## Installation
-Current version of deSALT has been tested on 64-bit Linux. The source code is written in C, and can be directly download from: https://github.com/ydLiu-HIT/deSALT or https://github.com/hitbc/deSALT. The makefile is attached. Use the make command for generating the executable file.
+Current version of deSALT has been tested on 64-bit Linux. The source code is written in C, and can be directly download from: https://github.com/ydLiu-HIT/deSALT. The makefile is attached. Use the make command for generating the executable file.
 
 ## Synopsis
 Reference genome indexing
