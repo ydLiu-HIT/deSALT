@@ -1342,7 +1342,7 @@ static int aln_usage(void)
 {
 	fprintf(stderr, "\n");
 	fprintf(stderr, "Program:\tde Brijn Graph-based 3rd RNA sequence alignment\n");
-	fprintf(stderr, "Usage:\t\tdeSALT aln [options] <index_route> <read.fa/fq>\n\n");
+	fprintf(stderr, "Usage:\t\tdeSALT aln [options] -f <temporary file> <index_route> <read.fa/fq>\n\n");
 
 	fprintf(stderr, "Algorithm options:\n\n");
 	fprintf(stderr, "    -t --thread           [INT]    Number of threads. [4]\n");
@@ -1386,7 +1386,7 @@ static int aln_usage(void)
 	fprintf(stderr, "    -N --top-num-aln      [INT]    Max allowed number of secondary alignment. [%u]\n", TOP_NUM_ALN);
 	fprintf(stderr, "    -Q --without-qual              Don't output base quality in SAM\n");
 	fprintf(stderr, "    -f --temp-file-perfix [STR]    Route of temporary files after the first-pass alignment. [%s]\n", TEMP_FILE_PERFIRX);
-	fprintf(stderr, "                                   If you run more than one tgs program in the same time, \n");
+	fprintf(stderr, "                                   If you run more than one deSALT program in the same time, \n");
 	fprintf(stderr, "                                   you must point out different routes of temporary files for each program!!!\n");
 	fprintf(stderr, "                                   If no, every deSALT program will write temporary data to the same file which \n");
 	fprintf(stderr, "                                   will cause crash of program in 2-pass alignment due to inconsistent temporary data.\n");
@@ -1408,7 +1408,7 @@ int help_usage()
 	fprintf(stderr, "Usage:	deSALT index <ref.fa> <index_route>\n");
 	fprintf(stderr, "		build deBGA index file using default k-mer length of deBGA. You can get more deBGA information from https://github.com/HongzheGuo/deBGA");
 	fprintf(stderr, "\n\n");
-	fprintf(stderr, "Usage:	deSALT aln [options] <index_route> <read.fa/fq>\n\n");
+	fprintf(stderr, "Usage:	deSALT aln [options] -f <temporary file> <index_route> <read.fa/fq>\n\n");
 
 	fprintf(stderr, "Algorithm options:\n\n");
 	fprintf(stderr, "    -t --thread           [INT]    Number of threads. [4]\n");
@@ -1452,7 +1452,7 @@ int help_usage()
 	fprintf(stderr, "    -N --top-num-aln      [INT]    Max allowed number of secondary alignment. [%u]\n", TOP_NUM_ALN);
 	fprintf(stderr, "    -Q --without-qual              Don't output base quality in SAM\n");
 	fprintf(stderr, "    -f --temp-file-perfix [STR]    Route of temporary files after the first-pass alignment. [%s]\n", TEMP_FILE_PERFIRX);
-	fprintf(stderr, "                                   If you run more than one tgs program in the same time, \n");
+	fprintf(stderr, "                                   If you run more than one deSALT program in the same time, \n");
 	fprintf(stderr, "                                   you must point out different routes of temporary files for each program!!!\n");
 	fprintf(stderr, "                                   If no, every deSALT program will write temporary data to the same file which \n");
 	fprintf(stderr, "                                   will cause crash of program in 2-pass alignment due to inconsistent temporary data.\n");
