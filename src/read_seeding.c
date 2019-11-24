@@ -1361,7 +1361,7 @@ static int aln_usage(void)
 	fprintf(stderr, "    -p --secondary-ratio  [FLOAT]  Min secondary-to-primary score ratio. [%.2f]\n", SECONDARY_TO_PRIMARY);
     fprintf(stderr, "    -e --e-shift          [INT]    The number of downstream (upstream) exons will be processed when left (right) extension. [%u]\n", E_SHIFT);
     fprintf(stderr, "    -T --trans-strand              Find splicing site according to transcript strand\n");
-    fprintf(stderr, "    -G --annotation       [STR]    Provided annotation information for precise intron donor and acceptor sites.\n");
+    fprintf(stderr, "    -G --gtf              [STR]    Provided annotation information for precise intron donor and acceptor sites.\n");
     fprintf(stderr, "                                   Convert GTF file(now support GTF format only) to fixed format of deSALT by Annotation_Load.py \n");
 	fprintf(stderr, "    -x --read-type        [STR]    Specifiy the type of reads and set multiple paramters unless overriden.\n");
 	fprintf(stderr, "                                   [null] default parameters.\n");
@@ -1427,7 +1427,7 @@ int help_usage()
 	fprintf(stderr, "    -p --secondary-ratio  [FLOAT]  Min secondary-to-primary score ratio. [%.2f]\n", SECONDARY_TO_PRIMARY);
     fprintf(stderr, "    -e --e-shift          [INT]    The number of downstream (upstream) exons will be processed when left (right) extension. [%u]\n", E_SHIFT);
     fprintf(stderr, "    -T --trans-strand              Find splicing sites according to transcript strand\n");
-    fprintf(stderr, "    -G --annotation       [STR]    Provided annotation information for precise intron donor and acceptor sites.\n");
+    fprintf(stderr, "    -G --gtf              [STR]    Provided annotation information for precise intron donor and acceptor sites.\n");
     fprintf(stderr, "                                   Convert GTF file(now support GTF format only) to fixed format of deSALT by Annotation_Load.py \n");
 	fprintf(stderr, "    -x --read-type        [STR]    Specifiy the type of reads and set multiple paramters unless overriden.\n");
 	fprintf(stderr, "                                   [null] default parameters.\n");
