@@ -1344,6 +1344,12 @@ static int aln_usage(void)
 	fprintf(stderr, "Program:\tde Brijn Graph-based 3rd RNA sequence alignment\n");
 	fprintf(stderr, "Usage:\t\tdeSALT aln [options] -f <temporary file> <index_route> <read.fa/fq>\n\n");
 
+
+    fprintf(stderr, "    -f <temporary file>           The temporary file for storing alignment skeletons in first pass.\n");
+    fprintf(stderr, "                                  If users run two deSALT program in the same time, -f option is necessary.\n");
+    fprintf(stderr, "    <index_route>                 The path of RdBG index.\n");
+    fprintf(stderr, "    <read.fq/fa>                  The input reads in fasta or fastq format.\n\n");
+
 	fprintf(stderr, "Algorithm options:\n\n");
 	fprintf(stderr, "    -t --thread           [INT]    Number of threads. [4]\n");
 	fprintf(stderr, "    -k --index-kmer       [INT]    K-mer length of RdBG-index. [%u]\n", INDEX_KMER);
@@ -1409,6 +1415,11 @@ int help_usage()
 	fprintf(stderr, "		build deBGA index file using default k-mer length of deBGA. You can get more deBGA information from https://github.com/HongzheGuo/deBGA");
 	fprintf(stderr, "\n\n");
 	fprintf(stderr, "Usage:	deSALT aln [options] -f <temporary file> <index_route> <read.fa/fq>\n\n");
+
+    fprintf(stderr, "    -f <temporary file>           The temporary file for storing alignment skeletons in first pass.\n");
+    fprintf(stderr, "                                  If users run two deSALT program in the same time, -f option is necessary.\n");
+    fprintf(stderr, "    <index_route>                 The path of RdBG index.\n");
+    fprintf(stderr, "    <read.fq/fa>                  The input reads in fasta or fastq format.\n\n");
 
 	fprintf(stderr, "Algorithm options:\n\n");
 	fprintf(stderr, "    -t --thread           [INT]    Number of threads. [4]\n");
