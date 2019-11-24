@@ -59,6 +59,13 @@ deSALT aln <index_route> read.fa/fq
 
 ## Commands and options
 ```
+Usage: deSALT aln [options] -f <temporary file> <index_route> <read.fa/fq>
+
+	-f <temporary file>           The temporary file for storing alignment skeletons in first pass.
+				      If users run two deSALT program in the same time, -f option is necessary.
+	<index_route>                 The path of RdBG index.
+	<read.fq/fa>                  The input reads in fasta or fastq format.
+
 Algorithm options:
 
 	-t --thread           [INT]	Number of threads. [4]
