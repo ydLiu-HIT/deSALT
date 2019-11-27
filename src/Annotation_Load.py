@@ -112,6 +112,9 @@ def outPutTrans2bed(transcripts, fpath):
     TC_intron = 0
     #out as exon pos
     for trans in transcripts:
+        if trans.strand == GFF_STRANDRV:
+            trans.exonitems = trans.exonitems[::-1]
+
         TC_exon += len(trans.exonitems)
         TC_intron += len(trans.exonitems) - 1
 
@@ -124,30 +127,6 @@ def outPutTrans2bed(transcripts, fpath):
             for  I in trans.exonitems:
                 fw.write(str(I.start) + "," + str(I.end) + ",")
             fw.write('\n')
-
-    
-    ##out as intron pos
-    #for trans in transcripts:
-    #    TC += len(trans.exonitems) - 1
-
-    #with open(fpath, 'w') as fw:
-    #    fw.write(str(TC) + "\n")
-    #    for trans in transcripts:
-    #        header = "%s\t%s\t%s\t%s|%s\t%s\t%s\t" %(trans.seqname, str(trans.start - 1), str(trans.end), trans.transcriptname, trans.genename, trans.strand, str(len(trans.exonitems) - 1))
-    #        fw.write(header)
-    #        
-    #        if len(trans.exonitems) <= 1:
-    #            fw.write("\n")
-    #            continue
-
-    #        Interval = [(trans.exonitems[i].end , trans.exonitems[i + 1].start - 1) for i in range(len(trans.exonitems) - 1)]
-    #        
-    #        for  i in range(len(Interval) - 1):
-    #            I = Interval[i]
-    #            fw.write(str(I[0]) + "," + str(I[1]) + ",")
-    #        I = Interval[len(Interval) - 1]
-    #        fw.write(str(I[0]) + "," + str(I[1]) + '\n')
-
 
 def Load_Annotation_From_GTF(filename, fpath, check_duplicates = True):
     
