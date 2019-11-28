@@ -2373,15 +2373,12 @@ uint32_t file_kmer_qsort()
 		strcpy(rm_route, sys_c_rm);
 		strcat(rm_route, filename_div);
         
-        printf("%s ---\n", rm_route);
-
 		system(rm_route);
 	}
 	
 	memset(rm_route, 0, ROUTE_LENGTH_MAX);
 	strcpy(rm_route, sys_rm);
 	strcat(rm_route, uniseq);
-    printf("%s ***\n", rm_route);
 	system(rm_route);
 #endif
 	
