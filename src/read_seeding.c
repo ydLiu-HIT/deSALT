@@ -1574,7 +1574,7 @@ int desalt_aln(int argc, char *argv[], const char *version)
 		return aln_usage();
     if ((opt->seed_k_t < 14) || (opt->seed_k_t > opt->k_t))
     {
-        fprintf(stderr, "Input error: -k cannot be less than 14 or more than %d\n", opt->k_t);
+        fprintf(stderr, "Input error: -l cannot be less than 14 or more than %d\n", opt->k_t);
         exit(1);
     }
     if ((opt->thread_n < 1) || (opt->thread_n > 48))
