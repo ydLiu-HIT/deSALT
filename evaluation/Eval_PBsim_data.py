@@ -21,6 +21,7 @@ from fastqparser import read_fastq
 # Determines whether to check the strand whene analyzing data
 # Due to complications in generating simulated RNA reads, this is False
 P_CHECK_STRAND = False
+DISTANCE_THRESHOLD = 10000
 
 
 # A dictionary connecting fasta/fastq header prefix with the folder with pbsim generated data
@@ -93,6 +94,19 @@ class Static:
         self.ExA100 = 0
         self.Hit100 = 0
         self.Hit80 = 0
+
+def join_split_alignment(samline_list, samline):
+    split_possible = True
+    for sline in samline_list:
+        if not utility_sam.possible_split_alignment(samline, sline, threshold = DISTANCE_THRESHOLD):
+            split_possible = False
+            break
+
+    if split_possible:
+        samline_list.append(samline)
+
+    return split_possible
+
 
 def load_and_process_SAM(sam_file, BBMapFormat = False):
     # Loading SAM file into hash
