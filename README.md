@@ -28,6 +28,7 @@ deSALT - De Bruijn graph-based Spliced Aligner for Long Transcriptome reads
 1. In current version of deSALT, [deBGA](https://github.com/HongzheGuo/deBGA) is employed for generation of RdBG-index. Some bugs have been corrected and some parameters have been reset (i.e. `START_POS_REF = 0` replaced `START_POS_REF = 2048` in `load_input.h`). 
 **Strongly recommend using the executable program in deSALT.**
 2. The input reference genome for indexing required the sequence cutted with a fixed length each line, the length should be no longer than 500bp. So before indexing, user should check the linewidth of your genome, if large than 500bp, you can change the linewidth with the script I support in the folder (changelinewidth.py), e.g.
+
 `python changelinewidth.py your_genome.fa changed.fa linewidth`
 
 ## Introduction
