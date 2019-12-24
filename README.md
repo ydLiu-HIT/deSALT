@@ -29,7 +29,7 @@ deSALT - De Bruijn graph-based Spliced Aligner for Long Transcriptome reads
 **Strongly recommend using the executable program in deSALT.**
 2. The input reference genome for indexing required the sequence cutted with a fixed length each line, the length should be no longer than 500bp. So before indexing, user should check the linewidth of your genome, if large than 500bp, you can change the linewidth with the script I support in the folder (changelinewidth.py), e.g.
 
-`python changelinewidth.py your_genome.fa changed.fa linewidth`
+	`python changelinewidth.py your_genome.fa changed.fa linewidth`
 
 ## Introduction
 deSALT(de Bruijn graph-based Spliced Aligner for Long Transcriptome reads) is a novel alignment approach with faster speed and sensitive exon identification. Taking the advantages of its novel two pass alignment strategy based on de Bruijn graph-based index, efficient alignment skeleton generation, sensitive exon identification and specifically designed local alignment, deSALT is a fast and accurate RNA-seq long read alignment approach. It has ability to produce high quality full-length read alignment, which is effective to recover the exons and splicing junctions along the entire reads. The workflow of deSALT can be found in `img` folder.
