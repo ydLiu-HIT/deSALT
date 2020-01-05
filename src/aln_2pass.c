@@ -806,8 +806,31 @@ void fix_cigar(_aln_t *aln, const uint8_t *qseq, const uint8_t *tseq, uint32_t q
 		}
 	}
 
-    //later give up assert function, memory consumption
-	assert(qoff == qlen && toff == tlen);
+	//assert(qoff == qlen && toff == tlen);
+    for (k = 0; k < aln->n_cigar - 2; ++k) //// fix cigar like 5I6D7I
+    { 
+        if ((aln->cigar[k]&0xf) > 0 && (aln->cigar[k]&0xf) + (aln->cigar[k+1]&0xf) == 3)
+        {
+            uint32_t l, s[3] = {0,0,0};
+            for (l = k; l < aln->n_cigar; ++l) //count number of adjacent I and D 
+            { 
+                uint32_t op = aln->cigar[l]&0xf;
+                if (op == 1 || op == 2 || aln->cigar[l]>>4 == 0)
+                    s[op] += aln->cigar[l] >> 4;
+                else break;
+            }
+            if (s[1] > 0 && s[2] > 0 && l - k > 2) //turn to single I and single D
+            {
+                aln->cigar[k] = s[1]<<4|1;
+                aln->cigar[k+1] = s[2]<<4|2;
+                for(k += 2; k < l; ++k)
+                    aln->cigar[k] &= 0xf;
+                to_shrink = 1;
+            }
+            k = l;
+        }
+    }
+
 	if (to_shrink) { // squeeze out zero-length operations
 		int32_t l = 0;
 		for (k = 0; k < aln->n_cigar; ++k) // squeeze out zero-length operations
@@ -1700,17 +1723,24 @@ uint32_t remove_large_del_to_intron(uint32_t *cigar, uint32_t n_cigar)
     int op1, op_len1;
     int m_cigar = 0;
     int sig = 0;
+    int l = 0;
     for(i = 0; i < n_cigar; ++i)
     {
         op = cigar[i]&0xf;
         op_len = (cigar[i] >> 4);
+        if(op_len == 0)
+            continue;
 
-        if (op == 2 && op_len > 50)
+        if (op == 2 && op_len > 40)
         {
-            cigar[i] = (op_len<<4) | 3; //N
+            cigar[l++] = (op_len<<4) | 3; //N
             sig = 1;
         }
+        else{
+            cigar[l++] = cigar[i];
+        }
     }
+    n_cigar = l;
     if (sig == 0)
         return n_cigar;
 
@@ -1749,8 +1779,9 @@ uint32_t remove_large_del_to_intron(uint32_t *cigar, uint32_t n_cigar)
                 }
                 else if (op1 == 3)
                 {
-                    cigar[m_cigar++] = (op_len + op_len1 + refl)<<4 | 3;
-                    cigar[m_cigar] = (readl << 4) | 1;
+                    cigar[m_cigar] = (op_len + op_len1 + refl)<<4 | 3;
+                    if(readl > 0)
+                        cigar[++m_cigar] = (readl << 4) | 1;
                     i = j;
                     break;
                 }
