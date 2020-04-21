@@ -43,6 +43,8 @@ int deBGA_index(char *dir, char *ref_fa, char *index_route)
 		exit(1);
 	}
 	fprintf(stderr, "[desalt_index] Done!\n");
+
+    return 1;
 }
 
 int desalt_index(int argc, char *argv[])

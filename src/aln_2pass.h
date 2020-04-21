@@ -92,12 +92,14 @@ void get_ref_jump(uint8_t *ref, uint32_t start1, uint32_t len1, uint32_t start2,
 void get_ref_onebyone(uint8_t *ref, uint32_t start, uint32_t len, uint32_t pre_pos);
 int find_chr_n_by_name(char *chr_name);
 int chromosome_judge(uint32_t position, uint32_t *chromosome_begin);
-void mm_append_cigar(_aln_t *aln, uint32_t n_cigar, uint32_t *cigar);
+void mm_append_cigar(_aln_t *aln, int n_cigar, uint32_t *cigar);
 void copy_aln_value(_aln_t *aln1, _aln_t *aln2, uint32_t read_line);
 void mm_update_extra(_aln_t *aln, uint8_t *qseq, uint8_t *tseq, uint32_t qlen, uint32_t tlen, uint32_t *qs, uint32_t *ts, uint8_t q, uint8_t e);
 uint32_t append_intron_to_cigar(void *km, ksw_extz_t *ez, uint32_t pre_pos, uint32_t intron_pos, uint32_t intron_len);
-void check_more_part(uint32_t *cigar, uint32_t *n_cigar, int *score, int q2);
-void check_cigar(uint8_t *qseq, uint8_t *tseq, uint32_t *cigar, uint32_t *n_cigar, uint32_t *qs, uint32_t *ts, int *score, uint32_t qlen, uint32_t tlen, uint32_t boundary, uint8_t type, param_map *opt);
+void check_more_part(uint32_t *cigar, int *n_cigar, int *score, int q2);
+//void check_cigar(uint8_t *qseq, uint8_t *tseq, uint32_t *cigar, uint32_t *n_cigar, uint32_t *qs, uint32_t *ts, int *score, uint32_t qlen, uint32_t tlen, uint32_t boundary, uint8_t type, uint8_t skip_intron, param_map *opt);
+void check_boundary(uint8_t *qseq, uint8_t *tseq, uint32_t *cigar, int *n_cigar, uint32_t *qs, uint32_t *ts, int *score, uint32_t qlen, uint32_t tlen, uint32_t boundary, uint8_t type, uint8_t skip_intron, param_map *opt);
+void fake_extend(uint8_t *qseq, uint8_t *tseq, uint32_t *cigar, int *n_cigar, uint32_t *qs, uint32_t *ts, int *score, uint32_t qlen, uint32_t tlen, uint32_t boundary, uint8_t type, uint8_t skip_intron, param_map *opt);
 int check_realign(void *km, param_map *opt, int bandwith, uint8_t *qseq, uint32_t qlen, uint32_t tlen, ksw_extz_t *ez, int pre_score, uint32_t start_pos, int intron_cnt, int splice_flag);
 void align_splic_FOR_REV(void *km, uint8_t *qseq, uint8_t *tseq, uint32_t qlen, uint32_t tlen, int splice_flag, param_map *opt, ksw_extz_t *ez, uint8_t splice_type, uint8_t *junc);
 void align_non_splice(void *km, uint8_t *qseq, uint8_t *tseq, uint32_t qlen, uint32_t tlen, param_map *opt, ksw_extz_t *ez, int bandwith, int flag, uint8_t type);

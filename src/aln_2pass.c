@@ -23,7 +23,7 @@
 #include "read_seeding.h"
 #include "ktime.h"
 
-// #define DEBUG
+//#define DEBUG
 // #define PRINT
 int THREAD_READ_I;
 pthread_rwlock_t RWLOCK;
@@ -122,6 +122,7 @@ void get_junc(int chr_n, uint32_t start, uint32_t l, uint8_t *junc, uint8_t flag
 uint32_t apply_exon(param_map *opt, TARGET_t *anchor_map2ref, uint32_t map2ref_cnt, Anno_t *annotation, uint32_t total_items);
 
 int load_anchor(TARGET_t *anchor_map2ref, uint32_t map2ref_cnt);
+
 Ival_Anno_t *read_Annotation(param_map *opt, TARGET_t *anchor_map2ref, uint32_t map2ref_cnt, uint32_t *merge_cnt)
 {
     FILE* fp_anno = fopen(opt->anno_path, "r");
@@ -132,7 +133,7 @@ Ival_Anno_t *read_Annotation(param_map *opt, TARGET_t *anchor_map2ref, uint32_t 
 	}
 
 	uint32_t TC_exon, TC_intron;
-    fscanf(fp_anno, "%u\t%u\n", &TC_exon, &TC_intron);
+    int status = fscanf(fp_anno, "%u\t%u\n", &TC_exon, &TC_intron);
     Ival_Anno_t *InterVal = (Ival_Anno_t *)calloc(chr_file_n, sizeof(Ival_Anno_t));
 
     int i;
@@ -339,12 +340,13 @@ static int find_exact_match(Anno_t *annotations, uint32_t upper, uint32_t down, 
 
 static int load_anchor_with_gtf(TARGET_t *anchor_map2ref, Anno_t *annotations, uint32_t map2ref_cnt, uint32_t total_items, Anno_range_t *anno_range, uint32_t total_range)
 {	
+    if(map2ref_cnt <= 0) return 0;
 	uint32_t i, j, m;
 
 	FILE* fp_temp = fopen(temp_binary_pos, "rb");
 
 	rewind(fp_temp);
-	fread(anchor_map2ref, sizeof(TARGET_t), map2ref_cnt, fp_temp);
+	int status = fread(anchor_map2ref, sizeof(TARGET_t), map2ref_cnt, fp_temp);
     fclose(fp_temp);
 
 	//sort anchor_map2ref according ts
@@ -647,12 +649,13 @@ uint32_t apply_exon(param_map *opt, TARGET_t *anchor_map2ref, uint32_t map2ref_c
 
 int load_anchor(TARGET_t *anchor_map2ref, uint32_t map2ref_cnt)
 {
+    if (map2ref_cnt <= 0) return 0;
 	uint32_t i, m;
 	FILE* fp_temp = fopen(temp_binary_pos, "rb");
 
 	//read anchor info from fp_temp
 	rewind(fp_temp);
-	fread(anchor_map2ref, sizeof(TARGET_t), map2ref_cnt, fp_temp);
+	int status = fread(anchor_map2ref, sizeof(TARGET_t), map2ref_cnt, fp_temp);
 
 	//sort anchor_map2ref according ts
 	qsort(anchor_map2ref, map2ref_cnt, sizeof(TARGET_t), compare_anchor);
@@ -721,25 +724,27 @@ int chromosome_judge(uint32_t position, uint32_t *chromosome_begin)
 	int low = 0;
 	int high = chr_file_n - 1;
 	int mid;
+    int pos = position + 1;
 
 	while ( low <= high )
 	{
 		mid = (low + high) >> 1;
-		if(position < (chr_end_n[mid]))
+		if(pos < (chr_end_n[mid] - 1))
 		{
 			high = mid - 1;
 		}
-		else if(position > (chr_end_n[mid]))
+		else if(pos > (chr_end_n[mid] - 1))
 		{
 			low = mid + 1;
 		}
 		else
 		{
+            *chromosome_begin = chr_end_n[mid - 1]-1;
 			return mid;
 		}
 		file_n = low;
 	}
-	*chromosome_begin = chr_end_n[file_n - 1]; //the reference index start from pos 0
+	*chromosome_begin = chr_end_n[file_n - 1]-1; //the reference index start from pos 0
 	return file_n;
 }
 
@@ -869,7 +874,7 @@ void mm_update_extra(_aln_t *aln, uint8_t *qseq, uint8_t *tseq, uint32_t qlen, u
 	tseq += tshift;
 
 	uint32_t *cigar = aln->cigar;
-	uint32_t n_cigar = aln->n_cigar;
+	int n_cigar = aln->n_cigar;
     for (k = 0; k < n_cigar; ++k) {
         uint32_t op = cigar[k]&0xf, len = cigar[k]>>4;
         if (op == 0) 
@@ -914,7 +919,7 @@ void mm_update_extra(_aln_t *aln, uint8_t *qseq, uint8_t *tseq, uint32_t qlen, u
     assert(qoff == qlen && toff == tlen);
 }
 
-void mm_append_cigar(_aln_t *aln, uint32_t n_cigar, uint32_t *cigar) // TODO: this calls the libc realloc()
+void mm_append_cigar(_aln_t *aln, int n_cigar, uint32_t *cigar) // TODO: this calls the libc realloc()
 {
 	if (n_cigar == 0)
 		return;
@@ -1072,117 +1077,6 @@ uint32_t local_hash_anchor(uint8_t *qseq, uint32_t qlen, uint32_t *idx_cnt_array
 }
 
 
-void check_more_part(uint32_t *cigar, uint32_t *n_cigar, int *score, int q2)
-{
-	if (*n_cigar < 4)
-	{
-		return;
-	}
-	int i,j;
-	uint8_t op, op1;
-	uint32_t op_len, op_len1;
-	uint32_t len_ref = 0;
-	uint32_t len_read = 0;
-
-	uint32_t f_l, f_l_r;
-	int left, right;
-	uint32_t m_cigar = *n_cigar;
-	i = 0;
-	while (i < m_cigar)
-	{
-		op = cigar[i]&0xf;
-		op_len = (cigar[i]>>4);
-		if (op == 2 && op_len > 20) //if have deletion long than 5bp
-		{
-			len_ref = 0;
-			len_read = 0;
-			f_l = op_len;
-			f_l_r = 0;
-			left = right = i;
-			//up
-			j = (i == 0)? -1 : (i - 1);
-			while(j >= 0)
-			{
-				op1 = cigar[j]&0xf;
-				op_len1 = (cigar[j]>>4);
-				if (op1 == 3) //the up closest intron
-				{
-					if (len_read <= 5)
-					{
-						left = j;
-						f_l += len_ref + op_len1;
-						f_l_r += len_read;
-					}	
-					break;
-				}
-				else if (op1 == 0)
-				{
-					len_read += op_len1;
-					len_ref += op_len1;
-				}
-				else if( op1 == 1)
-				{
-					len_read += op_len1;
-				}
-				else if (op1 == 2)
-				{
-					len_ref += op_len1;
-				}
-				j--;
-			}
-			//down
-			j = (i == m_cigar - 1)? m_cigar : (i + 1);
-			len_ref = 0;
-			len_read = 0;
-			while (j < m_cigar)
-			{
-				op1 = cigar[j]&0xf;
-				op_len1 = (cigar[j]>>4);
-				if (op1 == 3) //the up closest intron
-				{
-					if (len_read <= 5)
-					{
-						right = j;
-						f_l += len_ref + op_len1;
-						f_l_r += len_read;
-					}	
-					break;
-				}
-				else if (op1 == 0)
-				{
-					len_read += op_len1;
-					len_ref += op_len1;
-				}
-				else if( op1 == 1)
-				{
-					len_read += op_len1;
-				}
-				else if (op1 == 2)
-				{
-					len_ref += op_len1;
-				}
-				j++;
-			}
-			if (right > left)
-			{
-				//refine intron part
-				cigar[left++] = f_l<<4 | 3; //N
-				if (f_l_r > 0)
-					cigar[left++] = f_l_r<<4 | 1;
-				i = left;
-				while (right < m_cigar - 1)
-				{
-					cigar[left++] = cigar[++right];
-				}
-				*n_cigar = left;
-				m_cigar = *n_cigar;
-				*score += q2;
-			}
-		}
-		++i;
-	}
-}
-
 static uint32_t refine_site(uint32_t site, uint8_t strand, uint8_t type)
 {
 	uint32_t m;
@@ -1236,7 +1130,7 @@ int check_realign(void *km, param_map *opt, int bandwith, uint8_t *qseq, uint32_
 	uint8_t op, op1;
 	uint32_t op_len, op_len1;
 
-	uint32_t m_cigar = ez->n_cigar;
+	int m_cigar = ez->n_cigar;
 	uint32_t *cigar = ez->cigar;
 	
 	ksw_extz_t ez_tmp;
@@ -1587,7 +1481,200 @@ FREE:
         return 0;
 }
 
-void check_cigar(uint8_t *qseq, uint8_t *tseq, uint32_t *cigar, uint32_t *n_cigar, uint32_t *qs, uint32_t *ts, int *score, uint32_t qlen, uint32_t tlen, uint32_t boundary, uint8_t type, param_map *opt)
+//void check_cigar(uint8_t *qseq, uint8_t *tseq, uint32_t *cigar, uint32_t *n_cigar, uint32_t *qs, uint32_t *ts, int *score, uint32_t qlen, uint32_t tlen, uint32_t boundary, uint8_t type, uint8_t skip_intron, param_map *opt)
+//{
+//	int i;
+//	uint8_t op;
+//	uint32_t op_len;
+//	uint32_t len_ref = 0;
+//	uint32_t len_read = 0;
+//	int score_cut = 0;
+//	int l;
+//	int cq, ct;
+//
+//	uint32_t m_cigar = *n_cigar;
+//	int qoff = qlen - 1;
+//	int toff = tlen - 1;
+//	
+//	for(i = m_cigar - 1; i >= 0; --i)
+//	{
+//		op = cigar[i]&0xf;
+//		op_len = (cigar[i]>>4);
+//		if (op == 0) //M
+//		{
+//			len_ref += op_len;
+//			len_read += op_len;
+//			for (l = 0; l < op_len; ++l)
+//			{
+//				cq = qseq[qoff - l];
+//				ct = tseq[toff - l];
+//				if (cq == ct)
+//					score_cut -= opt->match_D;
+//				else
+//					score_cut += opt->mismatch_D;
+//			}
+//			qoff -= op_len;
+//			toff -= op_len;
+//		}
+//		else if (op == 1) //insertion or softclip
+//		{
+//			len_read += op_len;
+//			if ((i > 0) && (cigar[i-1]&0xf) == 1)
+//				score_cut += op_len * opt->gap_ex_D;
+//			else
+//				score_cut += opt->gap_open_D + op_len * opt->gap_ex_D;
+//			qoff -= op_len;
+//		}
+//		else if (op == 2) //deletion
+//		{
+//			len_ref += op_len;
+//			if ((i > 0) && (cigar[i-1]&0xf) == 2)
+//				score_cut += op_len * opt->gap_ex_D;
+//			else
+//				score_cut += opt->gap_open_D + op_len * opt->gap_ex_D;
+//			toff -= op_len;
+//		}
+//		else if (op == 3) // find the first intron operator
+//		{
+//			if (len_ref <= hash_kmer)
+//			// if (len_read <= hash_kmer)
+//			{
+//				if (type == 0) //for left ext
+//				{
+//					*qs += len_read;
+//					*ts += (len_ref + op_len);
+//				}
+//				else //for right ext
+//				{
+//					*qs -= len_read;
+//					*ts -= (len_ref + op_len);
+//				}
+//				*n_cigar = i;
+//				*score += score_cut;
+//			}
+//			else 
+//			{
+//				if ((type == 0) && (*ts < boundary))
+//				{
+//					*qs += len_read;
+//					*ts += (len_ref + op_len);
+//					*n_cigar = i;
+//					*score += score_cut;
+//				}
+//				else if ((type == 1) && (*ts > boundary))
+//				{
+//					*qs -= len_read;
+//					*ts -= (len_ref + op_len);
+//					*n_cigar = i;
+//					*score += score_cut;
+//				}
+//			}
+//			
+//			if (((type == 0) && (*ts >= boundary)) || ((type == 1) && (*ts <= boundary)))
+//				break;
+//			len_ref = 0;
+//			len_read = 0;
+//			score_cut = 0;
+//            if (skip_intron) toff -= op_len;
+//		}
+//	}
+//	
+//}
+//
+
+void check_boundary(uint8_t *qseq, uint8_t *tseq, uint32_t *cigar, int *n_cigar, uint32_t *qs, uint32_t *ts, int *score, uint32_t qlen, uint32_t tlen, uint32_t boundary, uint8_t type, uint8_t skip_intron, param_map *opt)
+{
+	int i;
+	uint8_t op;
+	uint32_t op_len;
+	uint32_t len_ref = 0;
+	uint32_t len_read = 0;
+	int score_cut = 0;
+	int l, flag = 0;
+	int cq, ct;
+
+	int m_cigar = *n_cigar;
+	int qoff = qlen - 1;
+	int toff = tlen - 1;
+    uint32_t cref = *ts;
+	
+	for(i = m_cigar - 1; i >= 0; --i)
+	{
+		op = cigar[i]&0xf;
+		op_len = (cigar[i]>>4);
+		if (op == 0) //M
+		{
+			for (l = 0; l < op_len; ++l)
+			{
+                len_ref += 1; len_read += 1;
+                if ((type == 0) && (cref + len_ref >= boundary))
+                {
+                    *ts += len_ref;
+                    *qs += len_read;
+                    if (l == op_len-1)
+                        *n_cigar = i;
+                    else
+                    {
+                        *n_cigar = i+1;
+                        cigar[i] -= (l+1)<<4; 
+                    }
+                    flag = 1;
+                    break;
+                }
+                else if ((type == 1) && (cref - len_ref <= boundary))
+                {
+                    *ts -= len_ref;
+                    *qs -= len_read;
+                    if (l == op_len-1)
+                        *n_cigar = i;
+                    else
+                    {
+                        *n_cigar = i + 1;
+                        cigar[i] -= (l+1)<<4; 
+                    }
+                    flag = 1;
+                    break;
+                }
+
+				cq = qseq[qoff - l];
+				ct = tseq[toff - l];
+				if (cq == ct)
+					score_cut -= opt->match_D;
+				else
+					score_cut += opt->mismatch_D;
+			}
+			qoff -= op_len;
+			toff -= op_len;
+		}
+		else if (op == 1) //insertion or softclip
+		{
+			len_read += op_len;
+			if ((i > 0) && (cigar[i-1]&0xf) == 1)
+				score_cut += op_len * opt->gap_ex_D;
+			else
+				score_cut += opt->gap_open_D + op_len * opt->gap_ex_D;
+			qoff -= op_len;
+		}
+		else if (op == 2) //deletion
+		{
+			len_ref += op_len;
+			if ((i > 0) && (cigar[i-1]&0xf) == 2)
+				score_cut += op_len * opt->gap_ex_D;
+			else
+				score_cut += opt->gap_open_D + op_len * opt->gap_ex_D;
+			toff -= op_len;
+		}
+		else if (op == 3) // find the first intron operator
+		{
+            len_ref += op_len;
+            if (skip_intron) toff -= op_len;
+		}
+        if (flag == 1) break;
+	}
+	
+}
+
+void fake_extend(uint8_t *qseq, uint8_t *tseq, uint32_t *cigar, int *n_cigar, uint32_t *qs, uint32_t *ts, int *score, uint32_t qlen, uint32_t tlen, uint32_t boundary, uint8_t type, uint8_t skip_intron, param_map *opt)
 {
 	int i;
 	uint8_t op;
@@ -1598,9 +1685,9 @@ void check_cigar(uint8_t *qseq, uint8_t *tseq, uint32_t *cigar, uint32_t *n_ciga
 	int l;
 	int cq, ct;
 
-	uint32_t m_cigar = *n_cigar;
-	int qoff = qlen - 1;
-	int toff = tlen - 1;
+	int m_cigar = *n_cigar;
+	uint32_t qoff = qlen - 1;
+	uint32_t toff = tlen - 1;
 	
 	for(i = m_cigar - 1; i >= 0; --i)
 	{
@@ -1642,8 +1729,8 @@ void check_cigar(uint8_t *qseq, uint8_t *tseq, uint32_t *cigar, uint32_t *n_ciga
 		}
 		else if (op == 3) // find the first intron operator
 		{
+            if (skip_intron) toff -= op_len;
 			if (len_ref <= hash_kmer)
-			// if (len_read <= hash_kmer)
 			{
 				if (type == 0) //for left ext
 				{
@@ -1658,33 +1745,13 @@ void check_cigar(uint8_t *qseq, uint8_t *tseq, uint32_t *cigar, uint32_t *n_ciga
 				*n_cigar = i;
 				*score += score_cut;
 			}
-			else 
-			{
-				if ((type == 0) && (*ts < boundary))
-				{
-					*qs += len_read;
-					*ts += (len_ref + op_len);
-					*n_cigar = i;
-					*score += score_cut;
-				}
-				else if ((type == 1) && (*ts > boundary))
-				{
-					*qs -= len_read;
-					*ts -= (len_ref + op_len);
-					*n_cigar = i;
-					*score += score_cut;
-				}
-			}
-			
-			if (((type == 0) && (*ts >= boundary)) || ((type == 1) && (*ts <= boundary)))
-				break;
-			len_ref = 0;
-			len_read = 0;
-			score_cut = 0;
+            break;
 		}
 	}
-	
+    if((type == 0 && *ts < boundary) || (type == 1 && *ts > boundary))
+        check_boundary(qseq, tseq, cigar, n_cigar, qs, ts, score, qoff+1, toff+1, boundary, type, skip_intron, opt);
 }
+
 
 static int check_filter(uint32_t pos1, uint32_t pos2, uint32_t key1, uint32_t key2, uint32_t len)
 {
@@ -1698,7 +1765,7 @@ static int check_filter(uint32_t pos1, uint32_t pos2, uint32_t key1, uint32_t ke
 	return 0;
 }
 
-static int call_mapping_bases(uint32_t *cigar, uint32_t n_cigar)
+static int call_mapping_bases(uint32_t *cigar, int n_cigar)
 {
 	int i;
 	int op, op_len;
@@ -1716,7 +1783,50 @@ static int call_mapping_bases(uint32_t *cigar, uint32_t n_cigar)
 	return mapping_bases;
 }
 
-uint32_t remove_large_del_to_intron(uint32_t *cigar, uint32_t n_cigar)
+uint32_t fix_contious_intron(uint32_t *cigar, int n_cigar)
+{
+    uint32_t i = 0, j, l = 0;
+    int op, nxtop, op_len, conl = 0;
+    while(i < n_cigar)
+    {
+        op = cigar[i]&0xf;
+        op_len = (cigar[i] >> 4);
+        if(op == 3)
+        {
+            j = i+1; conl = op_len;
+            while(j < n_cigar)
+            {
+                nxtop = cigar[j]&0xf;
+                if (nxtop != 3)
+                {
+                    //fix NDN
+                    if(nxtop == 2 && (j+1 < n_cigar) && ((cigar[j+1]&0xf) == 3))
+                    {
+                        conl += (cigar[j]>>4);
+                        conl += (cigar[j+1]>>4);
+                        j += 2;
+                        continue;
+                    }
+                    cigar[l] = conl<<4|3; l++;
+                    cigar[l] = cigar[j]; l++;
+                    i = j + 1;
+                    break;   
+                }
+                conl += (cigar[j]>>4);
+                j += 1;
+            }
+        }
+        else
+        {
+            cigar[l] = cigar[i]; 
+            l++; i++;
+        }
+    }
+
+    return l;
+}
+
+uint32_t remove_large_del_to_intron(uint32_t *cigar, int n_cigar)
 {
     int i, j;
     int op, op_len;
@@ -1742,7 +1852,8 @@ uint32_t remove_large_del_to_intron(uint32_t *cigar, uint32_t n_cigar)
     }
     n_cigar = l;
     if (sig == 0)
-        return n_cigar;
+        return fix_contious_intron(cigar, n_cigar);
+        //return n_cigar;
 
     i = 0;
     while(i < n_cigar)
@@ -1799,13 +1910,18 @@ uint32_t remove_large_del_to_intron(uint32_t *cigar, uint32_t n_cigar)
         ++m_cigar;
         ++i;
     }
-    return m_cigar;
+    
+    return fix_contious_intron(cigar, m_cigar);
+
+    //return m_cigar;
 }
 
 void align_splic_FOR_REV(void *km, uint8_t *qseq, uint8_t *tseq, uint32_t qlen, uint32_t tlen, int splice_flag, param_map *opt, ksw_extz_t *ez, uint8_t splice_type, uint8_t *junc)
 {
     if (! (opt->with_gtf))
+    {
         junc = NULL;
+    }
 
 	if ((int64_t)tlen * qlen > opt->max_sw_mat)
 	{
@@ -1817,7 +1933,8 @@ void align_splic_FOR_REV(void *km, uint8_t *qseq, uint8_t *tseq, uint32_t qlen, 
 	}
 	else if(splice_type == 0) //left extend
 	{
-		ksw_exts2_sse(km, qlen, qseq, tlen, tseq, 5, mata_R, opt->gap_open_R, opt->gap_ex_R, opt->gap_open2_R, opt->noncan, opt->zdrop_R, splice_flag|KSW_EZ_EXTZ_ONLY|KSW_EZ_RIGHT|KSW_EZ_REV_CIGAR, ez, junc);
+		ksw_exts2_sse(km, qlen, qseq, tlen, tseq, 5, mata_R, opt->gap_open_R, opt->gap_ex_R, opt->gap_open2_R, opt->noncan, opt->zdrop_R, splice_flag|KSW_EZ_EXTZ_ONLY|KSW_EZ_RIGHT, ez, junc);
+        //ksw_exts2_sse(km, qlen, qseq, tlen, tseq, 5, mata_R, opt->gap_open_R, opt->gap_ex_R, opt->gap_open2_R, opt->noncan, opt->zdrop_R, splice_flag|KSW_EZ_EXTZ_ONLY|KSW_EZ_RIGHT|KSW_EZ_REV_CIGAR, ez, junc);
 	}
 	else if(splice_type == 1) //right extend
 	{
@@ -1857,25 +1974,6 @@ void align_non_splice(void *km, uint8_t *qseq, uint8_t *tseq, uint32_t qlen, uin
 	}
 }
 
-//static void merge_del_to_intron(_aln_t *aln)
-//{
-//    uint32_t *cigar = aln->cigar;
-//    int m_cigar = aln->n_cigar;
-//
-//    int i;
-//    int n_cigar = 0;
-//    int op, op_len;
-//    int thre = 30;
-//    
-//    //tran large 'D' to 'N' (> 30)
-//    for(i = 0; i < m_cigar; ++i)
-//    {
-//        op = cigar[i]&0xf;
-//		op_len = (cigar[i]>>4);
-//        if (op == 2 && op_len > 30)
-//    }
-//}
-
 static void align_core_primary(void *km, uint32_t seqlen, TARGET_t *anchor_map2ref, uint8_t *qseq0[2], uint8_t *qual0[2], _aln_t *aln, param_map *opt, ksw_extz_t *ez, ksw_extz_t *ez2, REF_t *ref_pos, REF_t *ref_temp, QUERY_t *query_pos, int *chr_n, uint32_t anchor_n, uint8_t strand, uint8_t tid, int key_total, int splice_flag, uint32_t left_bound, uint32_t right_bound)
 {
 	int i;
@@ -1914,8 +2012,8 @@ static void align_core_primary(void *km, uint32_t seqlen, TARGET_t *anchor_map2r
 	uint32_t qe_s;
 	uint16_t thre1;  //NonaSim: the avearge length of del and ins for ONT2D is 1.81bp and 1.69bp
 	ksw_extz_t *ez_tmp;
-	int *exon_find = (int* )calloc(e_shift,4);
-	uint32_t find_cnt;
+	uint32_t *exon_find = (uint32_t* )calloc(e_shift,sizeof(uint32_t));
+	uint32_t find_cnt = 0;
 
 	qs = query_pos[a_n].qs;
 	qe = query_pos[a_n].qe;
@@ -1928,7 +2026,6 @@ static void align_core_primary(void *km, uint32_t seqlen, TARGET_t *anchor_map2r
 	_qs = qs;
 	_ts = ts0;
 
-
 	key1 = ref_temp[0].key;
 	key_l = key1;
 
@@ -1939,7 +2036,7 @@ static void align_core_primary(void *km, uint32_t seqlen, TARGET_t *anchor_map2r
 	{
 		for(i = key1; i > 0; --i)
 		{
-			if (anchor_map2ref[i].ts - anchor_map2ref[i-1].te > max_intron_length)
+			if (anchor_map2ref[i].ts - anchor_map2ref[i-1].te > max_intron_length || anchor_map2ref[i-1].te <= left_bound)
 			{
 				break;
 			}
@@ -1953,7 +2050,7 @@ static void align_core_primary(void *km, uint32_t seqlen, TARGET_t *anchor_map2r
 	{
 		for(i = key2; i < key_total; ++i)
 		{
-			if (anchor_map2ref[i].ts - anchor_map2ref[i-1].te > max_intron_length)
+			if (anchor_map2ref[i].ts - anchor_map2ref[i-1].te > max_intron_length || anchor_map2ref[i].ts >= right_bound)
 			{
 				break;
 			}
@@ -1971,7 +2068,9 @@ static void align_core_primary(void *km, uint32_t seqlen, TARGET_t *anchor_map2r
     uint32_t LEN_t = tlen + 2*opt->max_extend_gap;
 	tseq = (uint8_t*)kmalloc(km, LEN_t);
     if (opt->with_gtf)
+    {
         junc = (uint8_t*)kmalloc(km, LEN_t);
+    }
 
 	//left extension
 	int l;
@@ -1998,6 +2097,7 @@ static void align_core_primary(void *km, uint32_t seqlen, TARGET_t *anchor_map2r
 					key = exon_find[i] + key_l;
 					s_s = anchor_map2ref[key].ts;
 					s_len = anchor_map2ref[key].te - anchor_map2ref[key].ts + 1;
+
 					get_ref_onebyone(tseq, s_s, s_len, pre_pos);
 					pre_pos += s_len;
 				}
@@ -2022,8 +2122,40 @@ static void align_core_primary(void *km, uint32_t seqlen, TARGET_t *anchor_map2r
 				mm_seq_rev(qlen, qseq);
 				if (ez2->n_cigar > 0)
 				{
-					score = ez2->max;
-				}
+                    int mb = 0, rbd = 0, rbi = 0;
+                    int op, op_len;
+                    for(int tt = 0; tt < ez2->n_cigar-1; ++tt)
+                    {
+                        op = ez2->cigar[tt]&0xf;
+                        op_len = ez2->cigar[tt] >> 4;
+                        if(op == 0)
+                        {
+                            mb += op_len; rbd += op_len; rbi += op_len;
+                        }else if(op == 2)
+                        {
+                            rbd += op_len;
+                        }
+                        else if(op == 1)
+                        {
+                            rbi += op_len;
+                        }
+                    }
+                    op = ez2->cigar[ez2->n_cigar-1]&0xf;
+                    op_len = ez2->cigar[ez2->n_cigar-1] >> 4;
+                    if(op==0)
+                    {
+                        mb += op_len; rbd += op_len; rbi += op_len;
+                    }
+
+                    //judge
+                    if((float)mb/rbd > 0.8 && (float)mb / rbi > 0.8)
+                        score = ez2->max;
+                    else
+                    {
+                        score = KSW_NEG_INF;
+				        ez2->n_cigar = 0;
+                    }
+                }
 				else
 				{
 					score = KSW_NEG_INF;
@@ -2049,42 +2181,68 @@ static void align_core_primary(void *km, uint32_t seqlen, TARGET_t *anchor_map2r
 		l += l1;
 		l = l < opt->max_extend_gap? l : opt->max_extend_gap;
 		l = (l > ts0)? ts0 : l;
-		if (ts0 - l < chr_end_n[*chr_n - 1])
-			l = ts0 - chr_end_n[*chr_n - 1];
-		get_refseq(tseq, l, ts0 - l);
-        
-        if (opt->with_gtf)
-        {
-            get_junc(*chr_n, ts0 - l, l, junc, opt->with_gtf);
-            mm_seq_rev(l, junc);
-        }
-        
-		mm_seq_rev(qlen, qseq);
-		mm_seq_rev(l, tseq);
-		align_splic_FOR_REV(km, qseq, tseq, qlen, l, extra_flag_R, opt, ez, 0, junc);
-		mm_seq_rev(qlen, qseq);
-		if(ez->n_cigar > 0)
-		{
-			_ts = ts0 - (ez->reach_end? ez->mqe_t + 1 : ez->max_t + 1); //reference start
-			_qs = qs - (ez->reach_end? 0: ez->max_q + 1); //query start
 
-			score1 = ez->max;
-		}
-		else
-		{
-			_ts = ts0;
-			_qs = qs;
-		}
-		
+		if (ts0 - l <= left_bound)
+			l = ts0 - left_bound;
+        if (l <= 0)
+        {
+            _ts = ts0; _qs = qs; ez->n_cigar = 0;
+        }
+        else
+        {
+            get_refseq(tseq, l, ts0 - l);
+        
+            if (opt->with_gtf)
+            {
+                get_junc(*chr_n, ts0 - l, l, junc, opt->with_gtf);
+                mm_seq_rev(l, junc);
+            }
+            
+            mm_seq_rev(qlen, qseq);
+            mm_seq_rev(l, tseq);
+            align_splic_FOR_REV(km, qseq, tseq, qlen, l, extra_flag_R, opt, ez, 0, junc);
+            mm_seq_rev(qlen, qseq);
+            if(ez->n_cigar > 0)
+            {
+                _ts = ts0 - (ez->reach_end? ez->mqe_t + 1 : ez->max_t + 1); //reference start
+                _qs = qs - (ez->reach_end? 0: ez->max_q + 1); //query start
+
+                score1 = ez->max;
+            }
+            else
+            {
+                _ts = ts0;
+                _qs = qs;
+            }
+        }
+
 		//compare
 		if (score <= score1)
 		{
 			if (ez->n_cigar > 0)
-			{
-				qlen = qs - _qs;
-				tlen = ts0 - _ts;
-				qseq = &qseq0[strand][_qs];
+			{	
+                if(_ts < left_bound)
+                {
+                    qlen = qs - _qs;
+                    tlen = ts0 - _ts;
+                    qseq = &qseq0[strand][_qs];
+                    get_refseq(tseq, tlen, _ts);
+                    mm_seq_rev(qlen, qseq);
+                    mm_seq_rev(tlen, tseq);
 
+                    check_boundary(qseq, tseq, ez->cigar, &(ez->n_cigar), &_qs, &_ts, &score1, qlen, tlen, left_bound, 0, 1, opt);
+                    
+                    mm_seq_rev(qlen, qseq);
+                }
+
+                //reverse cigar
+				int tmp;
+				for (i = 0; i < (ez->n_cigar)>>1; ++i) // reverse CIGAR
+				{
+					tmp = ez->cigar[i]; 
+					ez->cigar[i] = ez->cigar[ez->n_cigar - 1 - i]; 
+					ez->cigar[ez->n_cigar - 1 - i] = tmp;
+				}
 				mm_append_cigar(aln, ez->n_cigar, ez->cigar);
 				
 				aln->dp_score += score1;
@@ -2092,6 +2250,7 @@ static void align_core_primary(void *km, uint32_t seqlen, TARGET_t *anchor_map2r
 		}
 		else
 		{
+            int recheck = 0;
 			if (ez2->n_cigar > 0)
 			{
 				_ts = ts0 - (ez2->reach_end? ez2->mqe_t + 1 : ez2->max_t + 1); //reference start
@@ -2109,9 +2268,13 @@ static void align_core_primary(void *km, uint32_t seqlen, TARGET_t *anchor_map2r
 					intron_len = ts1 - anchor_map2ref[exon_find[find_cnt - 1]+key_l].te - 1;
 					pre_pos = append_intron_to_cigar(km, ez2, pre_pos, a_len, intron_len);
 					ext_len -= a_len;
-					_ts -= intron_len;
+				    if(_ts < intron_len) 
+                    {
+                        recheck = 1;
+                        goto FILTER;
+                    }
+                    _ts -= intron_len;
 
-					// for(i = key1 - 1; i > key_l; --i)
 					for(i = find_cnt - 1; i > 0; --i)
 					{
 						key = exon_find[i] + key_l;
@@ -2120,6 +2283,11 @@ static void align_core_primary(void *km, uint32_t seqlen, TARGET_t *anchor_map2r
 						if(s_len < ext_len)
 						{
 							pre_pos = append_intron_to_cigar(km, ez2, pre_pos, s_len, intron_len);
+                            if(_ts < intron_len) 
+                            {
+                                recheck = 1;
+                                goto FILTER;
+                            }
 							_ts -= intron_len;
 							ext_len -= s_len;
 						}
@@ -2129,13 +2297,13 @@ static void align_core_primary(void *km, uint32_t seqlen, TARGET_t *anchor_map2r
 						}
 					}
 				}
-	
-				check_cigar(qseq, temp_ref_left, ez2->cigar, &(ez2->n_cigar), &_qs, &_ts, &score, qlen, tlen, left_bound, 0, opt);
-	
+
+				fake_extend(qseq, temp_ref_left, ez2->cigar, &(ez2->n_cigar), &_qs, &_ts, &score, qlen, tlen, left_bound, 0, 0, opt);
+                
 				mm_seq_rev(qlen, qseq);
 				//reverse cigar
 				int tmp;
-				for (i = 0; i < ez2->n_cigar>>1; ++i) // reverse CIGAR
+				for (i = 0; i < (ez2->n_cigar)>>1; ++i) // reverse CIGAR
 				{
 					tmp = ez2->cigar[i]; 
 					ez2->cigar[i] = ez2->cigar[ez2->n_cigar - 1 - i]; 
@@ -2154,8 +2322,14 @@ static void align_core_primary(void *km, uint32_t seqlen, TARGET_t *anchor_map2r
 					score = ez2->score;
 				aln->dp_score += score;	
 			}
+FILTER:
+            if(recheck == 1) 
+            {
+                _ts = ts0; _qs = qs;
+            }
 		}
 	}
+
 	while(a_n < anchor_n)
 	{
 		key1 = ref_temp[a_n - 1].key;
@@ -2352,7 +2526,7 @@ static void align_core_primary(void *km, uint32_t seqlen, TARGET_t *anchor_map2r
 			tlen = te_s - te_ - 1;			
 			get_refseq(tseq, tlen, te_ + 1);
             if(opt->with_gtf)
-                get_junc(*chr_n, te_ + l, tlen, junc, opt->with_gtf);
+                get_junc(*chr_n, te_ + 1, tlen, junc, opt->with_gtf);
 			align_splic_FOR_REV(km, qseq, tseq, qlen, tlen, extra_flag_R, opt, ez2, 2, junc);
 			
 			ez_tmp = (ez->score > ez2->score)? ez : ez2;
@@ -2365,12 +2539,11 @@ static void align_core_primary(void *km, uint32_t seqlen, TARGET_t *anchor_map2r
 		{
             if (qlen > Eindel && key2 - key1 < 10)
 			{
-				// fprintf(stderr, "key2 - key1 > 1, key1 = %u, key2 = %u, condition 1_find exons\n", key1, key2);
 				key1++;
 				//find exons between
 				uint32_t n = key2 - key1;
 				uint32_t *idx_cnt_array;
-				idx_cnt_array = (int* )calloc(n, sizeof(int));
+				idx_cnt_array = (uint32_t* )calloc(n, sizeof(uint32_t));
 
                 qseq = &qseq0[strand][qe_ + 1];
                 qlen = qe_s - qe_ - 1;
@@ -2502,6 +2675,11 @@ END:
     {
         mm_append_cigar(aln, ez->n_cigar, ez->cigar);
         aln->dp_score += ez->score;
+        //for(int tt = 0; tt < ez->n_cigar; ++tt)
+        //{
+        //    printf("%d%c", (ez->cigar[tt])>>4, "MIDN"[ez->cigar[tt]&0xf]);
+        //}
+        //printf("\n");
     }
 
 	//right extension
@@ -2520,12 +2698,10 @@ END:
 		// key_r = key_total;
 		if (((int)(qlen + te0 - te1) > thre1) && (qlen - a_len > hash_kmer) && qlen < opt->max_extend_left_right)
 		{
-
 			qseq = &qseq0[strand][qe+a_len];
 			qlen -= a_len;
 		
 			find_cnt = local_hash_anchor(qseq, qlen, exon_find, anchor_map2ref, key2, key_r, opt, 1, tid, 0);
-
 			if (find_cnt > 0)
 			{
 				pre_pos = 0;
@@ -2560,7 +2736,41 @@ END:
 
 				if (ez2->n_cigar > 0)
 				{
-					score = ez2->max;
+                    int mb = 0, rbd = 0, rbi = 0;
+                    int op, op_len;
+                    for(int tt = 0; tt < ez2->n_cigar-1; ++tt)
+                    {
+                        op = ez2->cigar[tt]&0xf;
+                        op_len = ez2->cigar[tt] >> 4;
+                        //printf("%d%c", op_len, "MIDNS"[op]);
+                        if(op == 0)
+                        {
+                            mb += op_len; rbd += op_len; rbi += op_len;
+                        }else if(op == 2)
+                        {
+                            rbd += op_len;
+                        }
+                        else if(op == 1)
+                        {
+                            rbi += op_len;
+                        }
+                    }
+                    op = ez2->cigar[ez2->n_cigar-1]&0xf;
+                    op_len = ez2->cigar[ez2->n_cigar-1] >> 4;
+                    //printf("%d%c\n", op_len, "MIDNS"[op]);
+                    if(op==0)
+                    {
+                        mb += op_len; rbd += op_len; rbi += op_len;
+                    }
+
+                    //judge
+                    if((float)mb/rbd > 0.8 && (float)mb / rbi > 0.8)
+                        score = ez2->max;
+                    else
+                    {
+                        score = KSW_NEG_INF;
+				        ez2->n_cigar = 0;
+                    }
 				}
 				else
 				{
@@ -2587,30 +2797,51 @@ END:
 		l2 = (l2 > 0)? l2 : 0;
 		l += l2;
 		l = l < opt->max_extend_gap? l : opt->max_extend_gap;			
-		get_refseq(tseq, l, te0 + 1);
-        if(opt->with_gtf)
-            get_junc(*chr_n, te0 + 1, l, junc, opt->with_gtf);
-		align_splic_FOR_REV(km, qseq, tseq, qlen, l, extra_flag_R, opt, ez, 1, junc);
+        if(l + te0 >= right_bound) l = right_bound - te0;
+        if (l <= 0)
+        {
+            _te = te0; _qe = qe; ez->n_cigar = 0;
+        }
+        else
+        {
+            get_refseq(tseq, l, te0 + 1);
+            if(opt->with_gtf)
+                get_junc(*chr_n, te0 + 1, l, junc, opt->with_gtf);
+            align_splic_FOR_REV(km, qseq, tseq, qlen, l, extra_flag_R, opt, ez, 1, junc);
 
-		if(ez->n_cigar > 0)
-		{
-			_te = te0 + (ez->reach_end? ez->mqe_t + 1 : ez->max_t + 1); //reference end
-			_qe = qe + (ez->reach_end? seqlen - qe - 1 : ez->max_q + 1); //query end;
-			score1 = ez->max;
-		}
-		else
-		{
-			_te = te0;
-			_qe = qe;
-		}
+            if(ez->n_cigar > 0)
+            {
+                _te = te0 + (ez->reach_end? ez->mqe_t + 1 : ez->max_t + 1); //reference end
+                _qe = qe + (ez->reach_end? seqlen - qe - 1 : ez->max_q + 1); //query end;
+                score1 = ez->max;
 
+                //for(int tt = 0; tt < ez->n_cigar; ++tt)
+                //{
+                //    printf("%d%c", (ez->cigar[tt])>>4, "MIDN"[ez->cigar[tt]&0xf]);
+                //}
+                //printf("\n");
+            }
+            else
+            {
+                _te = te0;
+                _qe = qe;
+            }
+        }
+		
 		//compare
 		if (score <= score1)
 		{
 			if (ez->n_cigar > 0)
-			{
-				qlen = _qe - qe;
-				tlen = _te - te0;
+			{    
+			    if (_te > right_bound)	
+                {
+                    qlen = _qe - qe;
+                    tlen = _te - te0;
+                    qseq = &qseq0[strand][qe+1];
+                    get_refseq(tseq, tlen, te0 + 1);
+
+                    check_boundary(qseq, tseq, ez->cigar, &(ez->n_cigar), &_qe, &_te, &score1, qlen, tlen, right_bound, 1, 1, opt);
+                }
 				
 				mm_append_cigar(aln, ez->n_cigar, ez->cigar);
 				if (_qe < seqlen - 1)//have soft clip
@@ -2626,6 +2857,7 @@ END:
 		}
 		else
 		{
+            int recheck = 0;
 			if (ez2->n_cigar > 0)
 			{
 				_te = te0 + (ez2->reach_end? ez2->mqe_t + 1 : ez2->max_t + 1); //reference end
@@ -2642,6 +2874,10 @@ END:
 					intron_len = anchor_map2ref[exon_find[0] + key2].ts - te1 - 1;
 					pre_pos = append_intron_to_cigar(km, ez2, pre_pos, a_len, intron_len);
 					ext_len -= a_len;
+                    if(_te >= reference_len)
+                    {
+                        recheck = 1; goto FILTER_R;
+                    }
 					_te += intron_len;
 
 					for(i = 0; i < find_cnt - 1; ++i)
@@ -2652,6 +2888,10 @@ END:
 						if(s_len < ext_len)
 						{
 							pre_pos = append_intron_to_cigar(km, ez2, pre_pos, s_len, intron_len);
+                            if(_te >= reference_len)
+                            {
+                                recheck = 1; goto FILTER_R;
+                            }
 							_te += intron_len;
 							ext_len -= s_len;
 						}
@@ -2661,9 +2901,8 @@ END:
 						}
 					}
 				}
+				fake_extend(qseq, temp_ref_right, ez2->cigar, &(ez2->n_cigar), &_qe, &_te, &score, qlen, tlen, right_bound, 1, 0, opt);
 
-				check_cigar(qseq, temp_ref_right, ez2->cigar, &(ez2->n_cigar), &_qe, &_te, &score, qlen, tlen, right_bound, 1, opt);
-				
 				qseq = &qseq0[strand][qe+1];
 				qlen = _qe - qe;
 				tlen = _te - te0;
@@ -2686,6 +2925,11 @@ END:
 			{
 				aln->cigar[aln->n_cigar++] = (seqlen - 1 - qe)<<4 | 4;
 			}
+FILTER_R:
+            if(recheck == 1)
+            {
+                _te = te0; _qe = qe;
+            }
 		}
 	}
 
@@ -2697,7 +2941,9 @@ END:
     {
         tseq = (uint8_t *)krealloc(km, tseq, tlen);
     }
+
 	get_refseq(tseq, tlen, _ts);
+
 	mm_update_extra(aln, qseq, tseq, qlen, tlen, &_qs, &_ts, opt->gap_open_R, opt->gap_ex_R);
 
 	//ending I/D 
@@ -2854,6 +3100,12 @@ MULFIND:
     //remove the first anchor if not satified condition
 	if ((i < anchor_n) && check_filter(ref_pos[i].ts, ref_pos[anchor_n_new - 1].ts, ref_temp[i].key, ref_temp[anchor_n_new - 1].key, query_pos[anchor_n_new - 1].qe - query_pos[anchor_n_new - 1].qs))
     {
+        //debug
+        //printf("%u, %u, %d, %d, %d\n ", ref_pos[i].ts, ref_pos[anchor_n_new - 1].ts, ref_temp[i].key, ref_temp[anchor_n_new - 1].key, query_pos[anchor_n_new - 1].qe - query_pos[anchor_n_new - 1].qs);
+        //uint32_t tmp = 0;
+        //int chr1 = chromosome_judge(ref_pos[i].ts, &tmp);
+        //int chr2 = chromosome_judge(ref_pos[anchor_n_new - 1].ts, &tmp);
+        //printf("chr1 = %d, name=%s, end = %u, chr2 = %d, name = %s, end = %u\n", chr1, chr_names[chr1], chr_end_n[chr1], chr2, chr_names[chr2], chr_end_n[chr2]);
         anchor_n_new = 0;
         goto MULFIND;
     }
@@ -2932,7 +3184,6 @@ static int align_core(void *km, TARGET_t *anchor_map2ref, uint32_t read_line, ui
 	REF_t *ref_pos = REF_pos[tid];
 	QUERY_t *query_pos = QUERY_pos[tid];
     
-
 	int signal = find_merge_anchor(anchor_map2ref, ref_temp, ref_pos, query_pos, anchor_n, primary, &anchor_n_new, opt); 
     
 	if ((anchor_n_new > 0) && (anchor_n_new < opt->max_exon_num_per_read))
@@ -2950,8 +3201,12 @@ static int align_core(void *km, TARGET_t *anchor_map2ref, uint32_t read_line, ui
         
 
 		uint32_t left_bound;
-		chr_n = chromosome_judge(ref_pos[0].ts, &left_bound);
-		uint32_t right_bound = chr_end_n[chr_n];
+		chr_n = chromosome_judge((ref_pos[0].ts+ref_pos[0].te)>>1, &left_bound);
+        //chr_n = chromosome_judge(ref_pos[0].ts, &left_bound);
+		uint32_t right_bound = chr_end_n[chr_n] - 2;
+#ifdef DEBUG
+        printf("left_b = %u, right_b = %u, chrname = %s\n", left_bound, right_bound, chr_names[chr_n]);
+#endif
 		key1 = ref_temp[0].key;
 		key2 = ref_temp[anchor_n_new - 1].key;
 		key_l = (key1 > e_shift)? (key1 - e_shift) : 0;
@@ -3012,6 +3267,7 @@ static int align_core(void *km, TARGET_t *anchor_map2ref, uint32_t read_line, ui
                     ref_temp[i].te = target_tmp_REV[key].te;
                     ref_temp[i].key = key;
                 }
+
                 align_core_primary(km, seqlen, target_tmp_REV, qseq0, qual0, &aln[1], opt, ez, ez2, ref_pos, ref_temp, query_pos, &chr_n, anchor_n_new, strand, tid, key_total, MM_F_SPLICE_REV, left_bound, right_bound);
                 
                 if (aln[1].dp_score <= 0)
@@ -3047,7 +3303,14 @@ static int align_core(void *km, TARGET_t *anchor_map2ref, uint32_t read_line, ui
                     ref_temp[i].key = key;
                 }
 
-                
+                /*debug*/
+#ifdef DEBUG
+                for(int tt=0;tt<anchor_n_new; ++tt)
+                {
+                    printf("%u-%u-%u-%u-%u-%u\n", query_pos[tt].qs, query_pos[tt].qe, ref_pos[tt].ts,
+                            ref_pos[tt].te, ref_temp[tt].ts, ref_temp[tt].te);
+                }
+#endif
                 align_core_primary(km, seqlen, target_tmp_FOR, qseq0, qual0, &aln[0], opt, ez, ez2, ref_pos, ref_temp, query_pos, &chr_n, anchor_n_new, strand, tid, key_total, MM_F_SPLICE_FOR, left_bound, right_bound);
 
                 //reverse
@@ -3063,7 +3326,14 @@ static int align_core(void *km, TARGET_t *anchor_map2ref, uint32_t read_line, ui
                     ref_temp[i].te = target_tmp_REV[ref_temp[i].key].te;
                 }
 
-                
+                /*debug*/
+#ifdef DEBUG
+                for(int tt=0;tt<anchor_n_new; ++tt)
+                {
+                    printf("%u-%u-%u-%u-%u-%u\n", query_pos[tt].qs, query_pos[tt].qe, ref_pos[tt].ts,
+                            ref_pos[tt].te, ref_temp[tt].ts, ref_temp[tt].te);
+                }
+#endif
                 align_core_primary(km, seqlen, target_tmp_REV, qseq0, qual0, &aln[1], opt, ez, ez2, ref_pos, ref_temp, query_pos, &chr_n, anchor_n_new, strand, tid, key_total, MM_F_SPLICE_REV, left_bound, right_bound);
 
                 which_strand = (aln[0].dp_score < aln[1].dp_score)? 1:0;
@@ -3179,8 +3449,8 @@ static int align_core(void *km, TARGET_t *anchor_map2ref, uint32_t read_line, ui
         }
 		
 		aln[which_strand].chr_n = chr_n;
-		uint32_t chr_begin = chr_end_n[chr_n - 1];
-		aln[which_strand]._1_based_pos = aln[which_strand]._1_based_pos - chr_begin + 1 + 1; // change to 1_based pos
+		uint32_t chr_begin = chr_end_n[chr_n - 1] - 1;
+		aln[which_strand]._1_based_pos = aln[which_strand]._1_based_pos - chr_begin + 1; // change to 1_based pos
 
 		free(target_tmp_FOR);
 		free(target_tmp_REV);
@@ -3198,15 +3468,12 @@ static int align_core(void *km, TARGET_t *anchor_map2ref, uint32_t read_line, ui
 static void splice_site_judge2(TARGET_t *anchor_map2ref, EXON_t *EXON_T, uint32_t merge_cnt, uint8_t offset)
 {
 	uint32_t i, j;
-    //for(i = 0; i < merge_cnt; ++i)
+   
+    //debug
+    //for(int tt = 0; tt < merge_cnt; ++tt)
     //{
-    //    EXON_T[i].ts_f = anchor_map2ref[i].ts;
-    //    EXON_T[i].te_f = anchor_map2ref[i].te;
-    //    EXON_T[i].ts_r = anchor_map2ref[i].ts;
-    //    EXON_T[i].te_r = anchor_map2ref[i].te;
+    //    printf("%d-%d-%d\n", tt, anchor_map2ref[tt].ts, anchor_map2ref[tt].te);
     //}
-
-    //return ;
 
 
 	uint32_t donor_anchor, donor_start;
@@ -3224,14 +3491,13 @@ static void splice_site_judge2(TARGET_t *anchor_map2ref, EXON_t *EXON_T, uint32_
 
 	//for every site, judge the splice junction site from upstream 5bp and downstream 5bp
 	//the first
-	acceptor_anchor = anchor_map2ref[0].ts - 1;
+	acceptor_anchor = (anchor_map2ref[0].ts > 0)? (anchor_map2ref[0].ts - 1) :0;
 	acceptor_start = (acceptor_anchor < offset_r + 4)? 0 : (acceptor_anchor - offset_r - 4);
 	donor_anchor = anchor_map2ref[0].te + 1;
 	donor_start = donor_anchor - offset_l - 5;
 
 	//detect acceptor
-	get_refseq(ref, detected_len, acceptor_start);
-    
+	get_refseq(ref, detected_len, acceptor_start); 
 	acceptor_signals_detected(ref, detected_len, acceptor_start, &site_FOR, &site_REV, 2); 
 	if(site_FOR != -1)
 		EXON_T[0].ts_f = acceptor_start + site_FOR + 1;
@@ -3244,7 +3510,10 @@ static void splice_site_judge2(TARGET_t *anchor_map2ref, EXON_t *EXON_T, uint32_
 		EXON_T[0].ts_r = anchor_map2ref[0].ts;
 
 	//detec donor
-	get_refseq(ref, detected_len, donor_start);
+    if(merge_cnt == 1 && donor_start + detected_len >= reference_len)
+        get_refseq(ref, reference_len - donor_start - 2, donor_start);
+    else
+	    get_refseq(ref, detected_len, donor_start);
 	donor_signals_detected(ref, detected_len, donor_start, &site_FOR, &site_REV, 2);
 
 	if (site_FOR != -1)
@@ -3278,7 +3547,15 @@ static void splice_site_judge2(TARGET_t *anchor_map2ref, EXON_t *EXON_T, uint32_
 			EXON_T[i].ts_r = anchor_map2ref[i].ts;
 
 		//detec donor
-		get_refseq(ref, detected_len, donor_start);
+        if(i==merge_cnt-1 && donor_start + detected_len >= reference_len)
+        {
+            get_refseq(ref, reference_len - donor_start - 2, donor_start);
+        }
+        else
+        {
+	        get_refseq(ref, detected_len, donor_start);
+        }
+
 		donor_signals_detected(ref, detected_len, donor_start, &site_FOR, &site_REV, 2);
 
 		if (site_FOR != -1)
@@ -3323,7 +3600,7 @@ static void splice_site_judge_with_gtf(TARGET_t *anchor_map2ref, EXON_t *EXON_T,
 	uint8_t *ref = (uint8_t* )calloc(detected_len+2, 4);
 
 	//the first
-	acceptor_anchor = anchor_map2ref[0].ts - 1;
+    acceptor_anchor = (anchor_map2ref[0].ts > 0)? (anchor_map2ref[0].ts - 1) :0;
 	acceptor_start = (acceptor_anchor < offset_r + 4)? 0 : (acceptor_anchor - offset_r - 4);
 	donor_anchor = anchor_map2ref[0].te + 1;
 	donor_start = donor_anchor - offset_l - 5;
@@ -3341,7 +3618,10 @@ static void splice_site_judge_with_gtf(TARGET_t *anchor_map2ref, EXON_t *EXON_T,
 		EXON_T[0].ts_r = anchor_map2ref[0].ts;
 
 	//detec donor
-	get_refseq(ref, detected_len, donor_start);
+    if(merge_cnt == 1 && donor_start + detected_len >= reference_len)
+        get_refseq(ref, reference_len - donor_start - 2, donor_start);
+    else
+	    get_refseq(ref, detected_len, donor_start);
 	donor_signals_detected(ref, detected_len, donor_start, &site_FOR, &site_REV, 2);
 
 	if (site_FOR != -1)
@@ -3386,7 +3666,10 @@ static void splice_site_judge_with_gtf(TARGET_t *anchor_map2ref, EXON_t *EXON_T,
 			EXON_T[i].ts_r = anchor_map2ref[i].ts;
 
 		//detec donor
-		get_refseq(ref, detected_len, donor_start);
+        if(donor_start + detected_len >= reference_len)
+            get_refseq(ref, reference_len - donor_start - 2, donor_start);
+        else
+            get_refseq(ref, detected_len, donor_start);
 		donor_signals_detected(ref, detected_len, donor_start, &site_FOR, &site_REV, 2);
 
 		if (site_FOR != -1)
@@ -3423,6 +3706,22 @@ static void splice_site_judge_with_gtf(TARGET_t *anchor_map2ref, EXON_t *EXON_T,
 	}
 
 	free(ref);
+}
+
+void correct_bound(EXON_t *EXON_T, uint32_t merge_cnt)
+{
+    uint32_t left_bound, right_bound;
+    int chr_n, sub;
+    for(int i = 0; i < merge_cnt; ++i)
+    {
+        sub = (EXON_T[i].te_f - EXON_T[i].ts_f)>>1;
+        chr_n = chromosome_judge(EXON_T[i].ts_f + sub, &left_bound);
+		right_bound = chr_end_n[chr_n]-2;
+        if(EXON_T[i].ts_f < left_bound) EXON_T[i].ts_f = left_bound;
+        if(EXON_T[i].ts_r < left_bound) EXON_T[i].ts_r = left_bound;
+        if(EXON_T[i].te_f > right_bound) EXON_T[i].te_f = right_bound;
+        if(EXON_T[i].te_r > right_bound) EXON_T[i].te_r = right_bound;
+    }
 }
 
 void copy_aln_value(_aln_t *aln1, _aln_t *aln2, uint32_t read_line)
@@ -3468,6 +3767,7 @@ static void load_query_from_1pass(void *km, TARGET_t * anchor_map2ref, FILE *fp_
 	char* read;
 	seq_io *s_io;
 	uint8_t return_sig;
+    int status = 0;
 
 	uint8_t *qseq0[2], *qual0[2];
 	qseq0[0] = (uint8_t* )kmalloc(km, readlen_max*2);
@@ -3504,8 +3804,8 @@ static void load_query_from_1pass(void *km, TARGET_t * anchor_map2ref, FILE *fp_
 		max_dp = KSW_NEG_INF;
 		max_dp_index = 0;
 		max_dp_strand = 0;
-		fscanf(fp_tff, "%u\t", &multi_n);
-
+		status = fscanf(fp_tff, "%u\t", &multi_n);
+ 
 		if (multi_n == 0)
 		{
 			//unmapped read
@@ -3518,15 +3818,17 @@ static void load_query_from_1pass(void *km, TARGET_t * anchor_map2ref, FILE *fp_
 
 		for(j = 0; j < multi_n; ++j)
 		{
-			fscanf(fp_tff, "%u\t%u\t%u\t", &strand, &primary, &anchor_n);
+			status = fscanf(fp_tff, "%u\t%u\t%u\t", &strand, &primary, &anchor_n);
 		
 			for (i = 0; i < anchor_n; ++i)
 			{
-				fscanf(fp_tff, "%u\t%u\t%u\t%u\t", &REF_pos[tid][i].ts, &REF_pos[tid][i].te, &QUERY_pos[tid][i].qs, &QUERY_pos[tid][i].qe);
+				status = fscanf(fp_tff, "%u\t%u\t%u\t%u\t", &REF_pos[tid][i].ts, &REF_pos[tid][i].te, &QUERY_pos[tid][i].qs, &QUERY_pos[tid][i].qe);
 			}
-
+            
+            //if(seqi == 5987)
 			return_sig = align_core(km, anchor_map2ref, seqi, 0, strand, qseq0, qual0, aln[j], anchor_n, primary, opt, ez, ez2);
-			if (return_sig)
+            //else return_sig = 1; 
+            if (return_sig)
 			{
 				aln[j][0].flag = 4;
 				aln[j][1].flag = 4;
@@ -3886,6 +4188,8 @@ void load_fasta_2pass(uint32_t map2ref_cnt, param_map *opt, char *read_fastq, in
 			splice_site_judge_with_gtf(anchor_map2ref, EXON_T, merge_anchor_cnt, splice_offset);
 		else
 			splice_site_judge2(anchor_map2ref, EXON_T, merge_anchor_cnt, splice_offset);
+
+        //correct_bound(EXON_T, merge_anchor_cnt);
 	}
 
 	int time = 0;
@@ -3941,7 +4245,7 @@ void load_fasta_2pass(uint32_t map2ref_cnt, param_map *opt, char *read_fastq, in
 		}
 		else
 		{
-			int i, j;
+			int i, j, status = 0;
 			uint32_t multi_n;
 			dpSkeleton_t* dp_skeleton;
 
@@ -3950,7 +4254,7 @@ void load_fasta_2pass(uint32_t map2ref_cnt, param_map *opt, char *read_fastq, in
 			seqi = 0;
 			while(!feof(fp_tff) && (seqi < seqii))
 			{
-				fscanf(fp_tff, "%u\t", &multi_n);
+				status = fscanf(fp_tff, "%u\t", &multi_n);
 				dp_skeleton[seqi].multi_n = multi_n;
 				if (multi_n == 0)
 				{
@@ -3962,7 +4266,7 @@ void load_fasta_2pass(uint32_t map2ref_cnt, param_map *opt, char *read_fastq, in
 				anchor_t *Anchor = (anchor_t* )calloc(multi_n, sizeof(anchor_t));
 				for(i = 0; i < multi_n; ++i)
 				{
-					fscanf(fp_tff, "%u\t%u\t%u\t", &Anchor[i].strand, &Anchor[i].primary, &Anchor[i].anchor_n);
+					status = fscanf(fp_tff, "%u\t%u\t%u\t", &Anchor[i].strand, &Anchor[i].primary, &Anchor[i].anchor_n);
 					Anchor[i].anchor_pos = (uint32_t** )calloc(Anchor[i].anchor_n, sizeof(uint32_t* ));
 					for(j = 0; j < Anchor[i].anchor_n; ++j)
 					{
@@ -3970,7 +4274,7 @@ void load_fasta_2pass(uint32_t map2ref_cnt, param_map *opt, char *read_fastq, in
 					}
 					for (j = 0; j < Anchor[i].anchor_n; ++j)
 					{
-						fscanf(fp_tff, "%u\t%u\t%u\t%u\t", &Anchor[i].anchor_pos[j][0], &Anchor[i].anchor_pos[j][1], &Anchor[i].anchor_pos[j][2], &Anchor[i].anchor_pos[j][3]);
+						status = fscanf(fp_tff, "%u\t%u\t%u\t%u\t", &Anchor[i].anchor_pos[j][0], &Anchor[i].anchor_pos[j][1], &Anchor[i].anchor_pos[j][2], &Anchor[i].anchor_pos[j][3]);
 					}
 				}
 				dp_skeleton[seqi].point = Anchor;

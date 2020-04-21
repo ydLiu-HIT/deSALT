@@ -606,7 +606,7 @@ static uint32_t adjust_anchor(TARGET_t *target, QUERY_t *query, uint32_t cnt, in
         for(i = 1; i < cnt; ++i)
         {
         	//join the gap less than min_gap or have overlap
-            if(((query[i].qe > qs) && (target[i].te > ts)) || ((abs)((int)(qs - query[i].qe) - (int)(ts - target[i].te)) < Eindel) && ((int)(qs - query[i].qe) < waitingLen))
+            if(((query[i].qe > qs) && (target[i].te > ts)) || (((abs)((int)(qs - query[i].qe) - (int)(ts - target[i].te)) < Eindel) && ((int)(qs - query[i].qe) < waitingLen)))
             {
                 qs = query[i].qs;
                 ts = target[i].ts;
@@ -1537,17 +1537,30 @@ int desalt_aln(int argc, char *argv[], const char *version)
 			case 'c': opt->min_chain_score = atoi(optarg); break;
             case 'd': opt->strand_diff = atoi(optarg); break;
 			case 'g': opt->max_read_join_gap = atoi(optarg); break;
-			case 'O': opt->gap_open_D = opt->gap_open_R = opt->gap_open2_D = opt->gap_open2_R = strtol(optarg, &p, 10);
-						if (*p != 0 && ispunct(*p) && isdigit(p[1])) opt->gap_open2_D = opt->gap_open2_R = strtol(p+1, &p, 10); break;
-			case 'E': opt->gap_ex_D = opt->gap_ex_R = opt->gap_ex2_D = opt->gap_ex2_R = strtol(optarg, &p, 10);
-						if (*p != 0 && ispunct(*p) && isdigit(p[1])) opt->gap_ex2_D = opt->gap_ex2_R = strtol(p+1, &p, 10); break;
+			case 'O':
+                      {
+                          opt->gap_open_D = opt->gap_open_R = opt->gap_open2_D = opt->gap_open2_R = strtol(optarg, &p, 10);
+                          if (*p != 0 && ispunct(*p) && isdigit(p[1])) opt->gap_open2_D = opt->gap_open2_R = strtol(p+1, &p, 10); 
+                          break;
+                      }
+                      
+			case 'E':
+                      {
+                          opt->gap_ex_D = opt->gap_ex_R = opt->gap_ex2_D = opt->gap_ex2_R = strtol(optarg, &p, 10);
+					      if (*p != 0 && ispunct(*p) && isdigit(p[1])) opt->gap_ex2_D = opt->gap_ex2_R = strtol(p+1, &p, 10); 
+                          break;
+                      }
 			case 'm': opt->match_D = opt->match_R = atoi(optarg); break;
 			case 'M': opt->mismatch_D = opt->mismatch_R = atoi(optarg); break;
 			case 'w': opt->bw = atoi(optarg); break;
 			case 'i': opt->Eindel = atoi(optarg); break;
 			case 'I': opt->max_intron_length = atoi(optarg); break;
-			case 'z': opt->zdrop_D = opt->zdrop_R = strtol(optarg, &p, 10);
-						if (*p != 0 && ispunct(*p) && isdigit(p[1])) opt->zdrop_R = strtol(p+1, &p, 10); break;
+			case 'z': 
+                      {
+                          opt->zdrop_D = opt->zdrop_R = strtol(optarg, &p, 10);
+					      if (*p != 0 && ispunct(*p) && isdigit(p[1])) opt->zdrop_R = strtol(p+1, &p, 10);
+                          break; 
+                      }
 			case 'p': opt->secondary_ratio = atof(optarg); break;
             case 'R': opt->noncan = atoi(optarg); break;
 			case 'e': opt->e_shift = atoi(optarg); break;
@@ -1752,7 +1765,7 @@ int desalt_aln(int argc, char *argv[], const char *version)
 	del_finalmemory();
 	char cmd[2048];
 	sprintf(cmd, "rm %s %s", temp_anchor_dir, temp_binary_pos);
-	system(cmd);
+	int status = system(cmd);
 	free(opt);
 
 	fprintf(stderr, "[Phase-INFO] Finishing Alignment\n");

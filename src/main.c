@@ -13,7 +13,7 @@
 #include "read_seeding.h"
 #include "ktime.h"
 
-#define VERSION "1.5.2"
+#define VERSION "1.5.3"
 #define CONTACT "Yadong Liu <hitliuyadong1994@163.com>"
 
 static int usage(void)
@@ -37,7 +37,6 @@ int main(int argc, char *argv[])
 {
 	int r = 1;
 	double realtime0 = realtime();
-	double ts = clock();
 	if (argc < 2)	return usage();
 	if (strcmp(argv[1], "index") == 0)	r = desalt_index(argc, argv);
 	else if (strcmp(argv[1], "aln") == 0)	r = desalt_aln(argc, argv, VERSION);
