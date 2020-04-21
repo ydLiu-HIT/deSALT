@@ -6,7 +6,8 @@ deSALT - De Bruijn graph-based Spliced Aligner for Long Transcriptome reads
 ![deSALT](https://github.com/ydLiu-HIT/deSALT/blob/master/img/deSALT_fig.png)
 
 **The latest version deSALT-v1.5.3 have been published. New version adress bugs pushed by users(e.g. [#19](https://github.com/ydLiu-HIT/deSALT/issues/19), [#17](https://github.com/ydLiu-HIT/deSALT/issues/17), [#16](https://github.com/ydLiu-HIT/deSALT/issues/16), [#20](https://github.com/ydLiu-HIT/deSALT/issues/20), [#25](https://github.com/ydLiu-HIT/deSALT/issues/25)), and improve the speed of deSALT by 15-20%**
-**The latest version deSALT-v1.5.2 have been published. New version address some bugs in Annotation_Load.py, and make deSALT usage more readability.**
+
+**The version deSALT-v1.5.2 some bugs in Annotation_Load.py, and make deSALT usage more readability.**
 
 ## Getting started
     git clone --recursive https://github.com/ydLiu-HIT/deSALT.git
