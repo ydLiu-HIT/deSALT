@@ -27,7 +27,7 @@ void ff_print_line(_aln_t *aln, char *query_name, char *read_seq, char *qual, ui
     
 
     //fprintf(fp_sam, "\tblen:%d\tmlen:%d\tn_ambi:%d\tNM:i:%d\tms:i:%d\tAS:i:%d\tnn:i:%d", aln->blen, aln->mlen, aln->n_ambi, aln->blen - aln->mlen + aln->n_ambi, aln->dp_max, aln->dp_score, aln->n_ambi);
-    fprintf(fp_sam, "\tNM:i:%d\tms:i:%d\tAS:i:%d\tnn:i:%d", aln->blen - aln->mlen + aln->n_ambi, aln->dp_max, aln->dp_score, aln->n_ambi);
+    fprintf(fp_sam, "\tNM:i:%d\tms:i:%d\tAS:i:%d\tnn:i:%d\tXS:A:%c", aln->blen - aln->mlen + aln->n_ambi, aln->dp_max, aln->dp_score, aln->n_ambi, "?+-"[aln->trans_strand]);
     fprintf(fp_sam, "\n");
 }
 

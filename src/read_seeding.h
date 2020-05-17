@@ -175,6 +175,7 @@ typedef struct
 	int chr_n;
 	uint16_t flag:10;
 	uint32_t _1_based_pos;
+    uint8_t trans_strand;
 
 	uint32_t n_cigar;                   // number of cigar operations in cigar[]
 	uint32_t *cigar;

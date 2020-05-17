@@ -3448,6 +3448,8 @@ static int align_core(void *km, TARGET_t *anchor_map2ref, uint32_t read_line, ui
             }
         }
 		
+        aln[which_strand].trans_strand = which_strand + 1;
+        if(strand == 1) aln[which_strand].trans_strand ^= 3;
 		aln[which_strand].chr_n = chr_n;
 		uint32_t chr_begin = chr_end_n[chr_n - 1] - 1;
 		aln[which_strand]._1_based_pos = aln[which_strand]._1_based_pos - chr_begin + 1; // change to 1_based pos
@@ -3735,6 +3737,7 @@ void copy_aln_value(_aln_t *aln1, _aln_t *aln2, uint32_t read_line)
 	aln1->blen = aln2->blen;
 	aln1->chr_n = aln2->chr_n;
 	aln1->flag = aln2->flag;
+    aln1->trans_strand = aln2->trans_strand;
 	aln1->_1_based_pos = aln2->_1_based_pos;
 	// aln1->mapq = aln2->mapq;
 	aln1->n_cigar = aln2->n_cigar;
