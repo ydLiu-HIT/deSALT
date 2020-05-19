@@ -36,7 +36,7 @@ int deBGA_index(char *dir, char *ref_fa, char *index_route)
 {
 	char cmd[1024];
 	sprintf(cmd, "%sdeBGA index %s %s", dir, ref_fa, index_route);
-	fprintf(stderr, "[desalt_index] Ececuting deBGA index ...\n");
+	fprintf(stderr, "[desalt_index] Executing deBGA index ...\n");
 	if (system(cmd) != 0)
 	{
 		fprintf(stderr, "\n[desalt_index] Indexing undoing, deBGA index exit abnormally. \n"); 
