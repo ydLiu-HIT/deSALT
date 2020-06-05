@@ -1,4 +1,4 @@
-CFLAGS=		-g -Wall -O3 -Wc++-compat -Wno-unused-variable -Wno-unused-but-set-variable -Wno-unused-function
+CFLAGS=		-g -Wall -O3 -Wc++-compat -Wno-unused-variable -Wno-unused-but-set-variable -Wno-unused-function 
 CPPFLAGS=	-DHAVE_KALLOC
 #CPPFLAGS=
 INCLUDES=

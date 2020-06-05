@@ -2123,8 +2123,8 @@ static void align_core_primary(void *km, uint32_t seqlen, TARGET_t *anchor_map2r
 				if (ez2->n_cigar > 0)
 				{
                     int mb = 0, rbd = 0, rbi = 0;
-                    int op, op_len;
-                    for(int tt = 0; tt < ez2->n_cigar-1; ++tt)
+                    int op, op_len, tt;
+                    for(tt= 0; tt < ez2->n_cigar-1; ++tt)
                     {
                         op = ez2->cigar[tt]&0xf;
                         op_len = ez2->cigar[tt] >> 4;
@@ -2737,8 +2737,8 @@ END:
 				if (ez2->n_cigar > 0)
 				{
                     int mb = 0, rbd = 0, rbi = 0;
-                    int op, op_len;
-                    for(int tt = 0; tt < ez2->n_cigar-1; ++tt)
+                    int op, op_len, tt;
+                    for(tt = 0; tt < ez2->n_cigar-1; ++tt)
                     {
                         op = ez2->cigar[tt]&0xf;
                         op_len = ez2->cigar[tt] >> 4;
@@ -3305,7 +3305,8 @@ static int align_core(void *km, TARGET_t *anchor_map2ref, uint32_t read_line, ui
 
                 /*debug*/
 #ifdef DEBUG
-                for(int tt=0;tt<anchor_n_new; ++tt)
+                int tt;
+                for(tt=0;tt<anchor_n_new; ++tt)
                 {
                     printf("%u-%u-%u-%u-%u-%u\n", query_pos[tt].qs, query_pos[tt].qe, ref_pos[tt].ts,
                             ref_pos[tt].te, ref_temp[tt].ts, ref_temp[tt].te);
@@ -3328,7 +3329,8 @@ static int align_core(void *km, TARGET_t *anchor_map2ref, uint32_t read_line, ui
 
                 /*debug*/
 #ifdef DEBUG
-                for(int tt=0;tt<anchor_n_new; ++tt)
+                int tt;
+                for(tt=0;tt<anchor_n_new; ++tt)
                 {
                     printf("%u-%u-%u-%u-%u-%u\n", query_pos[tt].qs, query_pos[tt].qe, ref_pos[tt].ts,
                             ref_pos[tt].te, ref_temp[tt].ts, ref_temp[tt].te);
@@ -3714,7 +3716,8 @@ void correct_bound(EXON_t *EXON_T, uint32_t merge_cnt)
 {
     uint32_t left_bound, right_bound;
     int chr_n, sub;
-    for(int i = 0; i < merge_cnt; ++i)
+    int i;
+    for(i = 0; i < merge_cnt; ++i)
     {
         sub = (EXON_T[i].te_f - EXON_T[i].ts_f)>>1;
         chr_n = chromosome_judge(EXON_T[i].ts_f + sub, &left_bound);
