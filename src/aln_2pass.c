@@ -811,7 +811,6 @@ void fix_cigar(_aln_t *aln, const uint8_t *qseq, const uint8_t *tseq, uint32_t q
 		}
 	}
 
-	//assert(qoff == qlen && toff == tlen);
     for (k = 0; k < aln->n_cigar - 2; ++k) //// fix cigar like 5I6D7I
     { 
         if ((aln->cigar[k]&0xf) > 0 && (aln->cigar[k]&0xf) + (aln->cigar[k+1]&0xf) == 3)
@@ -916,7 +915,7 @@ void mm_update_extra(_aln_t *aln, uint8_t *qseq, uint8_t *tseq, uint32_t qlen, u
         }
     }
 	aln->dp_max = max;
-    assert(qoff == qlen && toff == tlen);
+    //assert(qoff == qlen && toff == tlen);
 }
 
 void mm_append_cigar(_aln_t *aln, int n_cigar, uint32_t *cigar) // TODO: this calls the libc realloc()
@@ -3201,8 +3200,7 @@ static int align_core(void *km, TARGET_t *anchor_map2ref, uint32_t read_line, ui
         
 
 		uint32_t left_bound;
-		chr_n = chromosome_judge((ref_pos[0].ts+ref_pos[0].te)>>1, &left_bound);
-        //chr_n = chromosome_judge(ref_pos[0].ts, &left_bound);
+		chr_n = chromosome_judge(((int64_t)ref_pos[0].ts+(int64_t)ref_pos[0].te)>>1, &left_bound);
 		uint32_t right_bound = chr_end_n[chr_n] - 2;
 #ifdef DEBUG
         printf("left_b = %u, right_b = %u, chrname = %s\n", left_bound, right_bound, chr_names[chr_n]);
