@@ -213,6 +213,13 @@ Ival_Anno_t *read_Annotation(param_map *opt, TARGET_t *anchor_map2ref, uint32_t 
     int tI2 = 0;
     for(i = 0; i < chr_file_n; ++i)
     {
+        int t;
+        for(t = 0; t < InterVal[i].Intron_n; ++t)
+        {
+            if(InterVal[i].Ival[t].Ie >= reference_len)
+                break;
+        }
+        InterVal[i].Intron_n= t;
         tI1 += InterVal[i].Intron_n;
 	    qsort(InterVal[i].Ival, InterVal[i].Intron_n, sizeof(Ival_anno_t), compare_intron);
         //remove redundant
@@ -248,6 +255,13 @@ Ival_Anno_t *read_Annotation(param_map *opt, TARGET_t *anchor_map2ref, uint32_t 
         }
     }
     qsort(annotation, idx_e, sizeof(Anno_t), compare_exon);
+    int nt = 0;
+    for(nt = 0; nt > idx_e; ++nt)
+    {
+        if(annotation[nt].end >= reference_len)
+            break;
+    }
+    idx_e = nt;
     //remove redunant
     if (idx_e > 2)
     {
