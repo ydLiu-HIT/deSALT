@@ -1498,7 +1498,7 @@ static struct option long_option[] = {
 	{"max-intron-len", required_argument, NULL, 'I'},
 	{"zdrop", required_argument, NULL, 'z'},
     {"noncan", required_argument, NULL, 'R'},
-	{"secondary-to-primary", required_argument, NULL, 'p'},
+	{"secondary-ratio", required_argument, NULL, 'p'},
 	{"e-shift", required_argument, NULL, 'e'},
 	{"temp-file-perfix", required_argument, NULL, 'f'},
 	{"without-qual", no_argument, NULL, 'Q'},
