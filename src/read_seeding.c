@@ -1620,7 +1620,7 @@ int desalt_aln(int argc, char *argv[], const char *version)
         fprintf(stderr, "Input error: -i cannot be less than 15 or more than 30\n");
         exit(1);
     }
-    if ((opt->secondary_ratio < 0.7) || (opt->secondary_ratio >= 1.0))
+    if ((opt->secondary_ratio < 0.7) || (opt->secondary_ratio > 1.0))
     {
         fprintf(stderr, "Input error: -p cannot be less than 0.7 or more than 1.0\n");
         exit(1);
