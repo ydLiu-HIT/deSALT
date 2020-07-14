@@ -94,7 +94,7 @@ Algorithm options:
 	-g --max-read-gap     [INT]	Maximum allowed gap in read when generating skeleton. [2000]
 	-p --secondary-ratio  [FLOAT]	Min secondary-to-primary score ratio. An alignment can be regard as a secondary
 					alignment if secondary_score / primary_score > 0.9. [0.9]
-	-p --e-shift          [INT]	The number of downstream (upstream) exons will be processed when left (right) extension. [5]
+	-e --e-shift          [INT]	The number of downstream (upstream) exons will be processed when left (right) extension. [5]
 	-T --trans-strand               Find splicing sites in transcript strand.
     	-G --gtf              [STR]	Provided an annotation file for precise intron donor and acceptor sites.
     	                           	Convert GTF file(now support GTF format only) to fixed format of deSALT by Annotation_Load.py
