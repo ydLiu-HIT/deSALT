@@ -24,7 +24,7 @@
 #include "ktime.h"
 
 //#define DEBUG
-// #define PRINT
+//#define PRINT
 int THREAD_READ_I;
 pthread_rwlock_t RWLOCK;
 
@@ -81,13 +81,13 @@ void get_junc(int chr_n, uint32_t start, uint32_t l, uint8_t *junc, uint8_t flag
 {
     if (!flag)
         return ;
-    //uint32_t Sta = chr_end_n[chr_n - 1] - 1;
+    uint32_t Sta = chr_end_n[chr_n - 1] - 1;
     int32_t end = start + l;
     int32_t i;
     int32_t low, high, mid;
 
     memset(junc, 0, end - start);
-    
+
     Ival_Anno_t *IA;
     low = 0;
     IA = &IvalA[chr_n];
@@ -2828,12 +2828,6 @@ END:
                 _te = te0 + (ez->reach_end? ez->mqe_t + 1 : ez->max_t + 1); //reference end
                 _qe = qe + (ez->reach_end? seqlen - qe - 1 : ez->max_q + 1); //query end;
                 score1 = ez->max;
-
-                //for(int tt = 0; tt < ez->n_cigar; ++tt)
-                //{
-                //    printf("%d%c", (ez->cigar[tt])>>4, "MIDN"[ez->cigar[tt]&0xf]);
-                //}
-                //printf("\n");
             }
             else
             {
@@ -3114,12 +3108,6 @@ MULFIND:
     //remove the first anchor if not satified condition
 	if ((i < anchor_n) && check_filter(ref_pos[i].ts, ref_pos[anchor_n_new - 1].ts, ref_temp[i].key, ref_temp[anchor_n_new - 1].key, query_pos[anchor_n_new - 1].qe - query_pos[anchor_n_new - 1].qs))
     {
-        //debug
-        //printf("%u, %u, %d, %d, %d\n ", ref_pos[i].ts, ref_pos[anchor_n_new - 1].ts, ref_temp[i].key, ref_temp[anchor_n_new - 1].key, query_pos[anchor_n_new - 1].qe - query_pos[anchor_n_new - 1].qs);
-        //uint32_t tmp = 0;
-        //int chr1 = chromosome_judge(ref_pos[i].ts, &tmp);
-        //int chr2 = chromosome_judge(ref_pos[anchor_n_new - 1].ts, &tmp);
-        //printf("chr1 = %d, name=%s, end = %u, chr2 = %d, name = %s, end = %u\n", chr1, chr_names[chr1], chr_end_n[chr1], chr2, chr_names[chr2], chr_end_n[chr2]);
         anchor_n_new = 0;
         goto MULFIND;
     }
@@ -3232,7 +3220,9 @@ static int align_core(void *km, TARGET_t *anchor_map2ref, uint32_t read_line, ui
         {
             if (anchor_map2ref[key1].strand == 0 && anchor_map2ref[key2].strand == 0 && anchor_map2ref[(key2+key1)>>1].strand == 0)
             {
-                // fprintf(stderr, "froward\n");
+#ifdef DEBUG
+                fprintf(stderr, "froward\n");
+#endif
                 for(i = key_l; i <= key_r; ++i)
                 {
                     target_tmp_FOR[i - key_l].ts = EXON_T[i].ts_f;
@@ -3267,7 +3257,9 @@ static int align_core(void *km, TARGET_t *anchor_map2ref, uint32_t read_line, ui
             }
             else if (anchor_map2ref[key1].strand == 1 && anchor_map2ref[key2].strand == 1 && anchor_map2ref[(key2+key1)>>1].strand == 1)
             {
-                // fprintf(stderr, "reverse\n");
+#ifdef DEBUG
+                fprintf(stderr, "reverse\n");
+#endif
                 for(i = key_l; i <= key_r; ++i)
                 {
                     target_tmp_REV[i - key_l].ts = EXON_T[i].ts_r;
@@ -3280,6 +3272,14 @@ static int align_core(void *km, TARGET_t *anchor_map2ref, uint32_t read_line, ui
                     ref_temp[i].te = target_tmp_REV[key].te;
                     ref_temp[i].key = key;
                 }
+
+#ifdef DEBUG
+                for(int tt=0;tt<anchor_n_new; ++tt)
+                {
+                    printf("%u-%u-%u-%u-%u-%u\n", query_pos[tt].qs, query_pos[tt].qe, ref_pos[tt].ts,
+                            ref_pos[tt].te, ref_temp[tt].ts, ref_temp[tt].te);
+                }
+#endif
 
                 align_core_primary(km, seqlen, target_tmp_REV, qseq0, qual0, &aln[1], opt, ez, ez2, ref_pos, ref_temp, query_pos, &chr_n, anchor_n_new, strand, tid, key_total, MM_F_SPLICE_REV, left_bound, right_bound);
                 
@@ -3318,8 +3318,7 @@ static int align_core(void *km, TARGET_t *anchor_map2ref, uint32_t read_line, ui
 
                 /*debug*/
 #ifdef DEBUG
-                int tt;
-                for(tt=0;tt<anchor_n_new; ++tt)
+                for(int tt=0;tt<anchor_n_new; ++tt)
                 {
                     printf("%u-%u-%u-%u-%u-%u\n", query_pos[tt].qs, query_pos[tt].qe, ref_pos[tt].ts,
                             ref_pos[tt].te, ref_temp[tt].ts, ref_temp[tt].te);
@@ -3342,8 +3341,7 @@ static int align_core(void *km, TARGET_t *anchor_map2ref, uint32_t read_line, ui
 
                 /*debug*/
 #ifdef DEBUG
-                int tt;
-                for(tt=0;tt<anchor_n_new; ++tt)
+                for(int tt=0;tt<anchor_n_new; ++tt)
                 {
                     printf("%u-%u-%u-%u-%u-%u\n", query_pos[tt].qs, query_pos[tt].qe, ref_pos[tt].ts,
                             ref_pos[tt].te, ref_temp[tt].ts, ref_temp[tt].te);
@@ -3844,7 +3842,7 @@ static void load_query_from_1pass(void *km, TARGET_t * anchor_map2ref, FILE *fp_
 				status = fscanf(fp_tff, "%u\t%u\t%u\t%u\t", &REF_pos[tid][i].ts, &REF_pos[tid][i].te, &QUERY_pos[tid][i].qs, &QUERY_pos[tid][i].qe);
 			}
             
-            //if(seqi == 5987)
+            //if(seqi == 1)
 			return_sig = align_core(km, anchor_map2ref, seqi, 0, strand, qseq0, qual0, aln[j], anchor_n, primary, opt, ez, ez2);
             //else return_sig = 1; 
             if (return_sig)

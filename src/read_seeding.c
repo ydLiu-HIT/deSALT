@@ -1498,7 +1498,7 @@ static struct option long_option[] = {
 	{"max-intron-len", required_argument, NULL, 'I'},
 	{"zdrop", required_argument, NULL, 'z'},
     {"noncan", required_argument, NULL, 'R'},
-	{"secondary-to-primary", required_argument, NULL, 'p'},
+	{"secondary-ratio", required_argument, NULL, 'p'},
 	{"e-shift", required_argument, NULL, 'e'},
 	{"temp-file-perfix", required_argument, NULL, 'f'},
 	{"without-qual", no_argument, NULL, 'Q'},
@@ -1620,7 +1620,7 @@ int desalt_aln(int argc, char *argv[], const char *version)
         fprintf(stderr, "Input error: -i cannot be less than 15 or more than 30\n");
         exit(1);
     }
-    if ((opt->secondary_ratio < 0.7) || (opt->secondary_ratio >= 1.0))
+    if ((opt->secondary_ratio < 0.7) || (opt->secondary_ratio > 1.0))
     {
         fprintf(stderr, "Input error: -p cannot be less than 0.7 or more than 1.0\n");
         exit(1);

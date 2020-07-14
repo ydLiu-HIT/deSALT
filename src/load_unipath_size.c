@@ -6,7 +6,7 @@
 #include <stdlib.h>
 #include <stdio.h>
 #include <unistd.h>
-#include <malloc.h>
+//#include <malloc.h>
 #include <string.h>
 #include <dirent.h>
 #include <inttypes.h>
