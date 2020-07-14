@@ -113,7 +113,9 @@ def outPutTrans2bed(transcripts, fpath):
     #out as exon pos
     for trans in transcripts:
         if trans.strand == GFF_STRANDRV:
-            trans.exonitems = trans.exonitems[::-1]
+            if len(trans.exonitems) > 1:
+                if trans.exonitems[0].start > trans.exonitems[1].end:
+                    trans.exonitems = trans.exonitems[::-1]
 
         TC_exon += len(trans.exonitems)
         TC_intron += len(trans.exonitems) - 1
