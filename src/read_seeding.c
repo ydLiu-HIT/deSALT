@@ -89,8 +89,8 @@ static void init_map_param(param_map *opt)
 	opt->max_read_join_gap = 2000;
 	opt->max_intron_length = SPLICDISTANCE;
 	// opt->max_sw_mat = opt->max_read_join_gap * opt->max_intron_length;
-	// opt->max_sw_mat = 4000000000;
-	opt->max_sw_mat = 1000000000;
+	opt->max_sw_mat = 3000000000;
+	//opt->max_sw_mat = 1000000000;
 	opt->Eindel = 20;
 	opt->thread_n = 4;
 	opt->top_n = TOP_NUM_ALN; //2, 3

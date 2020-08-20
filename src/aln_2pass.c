@@ -1965,10 +1965,27 @@ void align_non_splice(void *km, uint8_t *qseq, uint8_t *tseq, uint32_t qlen, uin
 	if ((int64_t)tlen * qlen > opt->max_sw_mat)
 	{
 		ksw_reset_extz(ez);
-        ez->n_cigar = 2;
-        ez->cigar[0] = qlen<<4 | 1;
-        ez->cigar[1] = tlen<<4 | 3;
-        ez->score = 0;
+
+        if(ez->m_cigar < 2)
+        {
+            ez->n_cigar = 2;
+            ez->m_cigar = (ez->n_cigar)<<2;
+            ez->cigar = (uint32_t *)krealloc(km, ez->cigar, (ez->m_cigar)<<4);
+        }
+
+        if(qlen > tlen/2)
+        {
+            ez->n_cigar = 1;
+            ez->cigar[0] = qlen<<4 | 0;
+            ez->score = qlen * opt->match_R;
+        }
+        else
+        {
+            ez->n_cigar = 2;
+            ez->cigar[0] = qlen<<4 | 1;
+            ez->cigar[1] = tlen<<4 | 3;
+            ez->score = 0;    
+        }
 	}
 	else if (type == 0) //left extend
 	{
