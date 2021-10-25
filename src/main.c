@@ -14,7 +14,7 @@
 #include "ktime.h"
 
 #define VERSION "1.5.6"
-#define CONTACT "Yadong Liu <hitliuyadong1994@163.com>"
+#define CONTACT "Yadong Liu <ydliu@hit.edu.com>"
 
 static int usage(void)
 {
