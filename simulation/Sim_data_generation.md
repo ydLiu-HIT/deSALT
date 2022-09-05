@@ -28,9 +28,9 @@ python Annotation_grouping.py genome.gtf
 ### 3. Generating transcriptomes
 Transcriptomes are generated from processed annotations and genome reference using the script generate_transcriptome.py (city from https://github.com/kkrizanovic/RNAseqEval) in this repository. Since the annotations were separated into three groups, a transcriptom (or a set of transcripts) was generated for each group.
 ```python
-python generate_transcriptome.py SS.gtf ref.fa > SS_transcriptome.fa
-python generate_transcriptome.py AS.gtf ref.fa > AS_transcriptome.fa
-python generate_transcriptome.py short.gtf ref.fa > short_transcriptome.fa
+python generate_transcriptome.py SS.gtf ref.fa SS_transcriptome.fa
+python generate_transcriptome.py AS.gtf ref.fa AS_transcriptome.fa
+python generate_transcriptome.py short.gtf ref.fa short_transcriptome.fa
 ```
 We combine the three transcriptome files together and then filter transcripts short than 200bp, this was done using fastqfilter.py script from https://github.com/isovic/samscripts with option minlen. The filtered transcriptome file is the input of PBSIM.
 ```
